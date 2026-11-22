@@ -1,29 +1,34 @@
-// Game loop: fixed-step simulation, drawing every animation frame.
+// Game loop and screens: menu -> mission -> win or lose -> menu.
+// Fixed-step simulation, drawing every animation frame.
 (function (CP) {
   'use strict';
 
   function start() {
     const canvas = document.getElementById('game');
     const params = new URLSearchParams(location.search);
-    const seed = Number(params.get('seed')) || 1;
     const debug = params.has('debug');
-
-    const state = CP.createSandbox(seed);
-    const view = CP.createView();
-    const renderer = CP.createRenderer(canvas, state);
     const step = 1 / CP.SIM_HZ;
-    let acc = 0;
-    let paused = false;
-    let speed = 'normal';
 
+    let acc = 0;
+    let paused = true;
+    let speed = 'normal';
+    let autoPause = true;
+    let screen = 'menu'; // 'menu' | 'play' | 'end'
+    let endAt = 0;
+
+    const view = CP.createView();
     const game = {
-      state,
+      state: null,
       view,
-      renderer,
+      renderer: null,
       now: () => performance.now(),
       alpha: () => Math.min(1, acc / step),
-      togglePause: () => { paused = !paused; },
+      active: () => screen === 'play',
+      togglePause: () => { if (screen === 'play') paused = !paused; },
       setSpeed: (s) => { speed = s; },
+      toggleAutoPause: () => { autoPause = !autoPause; },
+      startMission,
+      showMenu,
     };
 
     function resize() {
@@ -34,20 +39,78 @@
       view.bottomPad = document.getElementById('bottomHud').offsetHeight;
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
-      renderer.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      renderer.ctx.imageSmoothingEnabled = false;
-      CP.clampCamera(view, state.map);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      if (game.state) CP.clampCamera(view, game.state.map);
     }
+
+    function load(state) {
+      game.state = state;
+      game.renderer = CP.createRenderer(canvas, state);
+      view.selected = new Set();
+      view.selectedBuilding = null;
+      view.placing = null;
+      view.groups = {};
+      acc = 0;
+      resize();
+      const lander = state.buildings.find((b) => b.type === 'lander');
+      if (lander) CP.centerOn(view, state.map, lander.x + 5, lander.y - 1);
+      ui.reset();
+    }
+
+    function startMission(id) {
+      load(CP.createMission(id));
+      screen = 'play';
+      paused = false;
+      ui.hideOverlay();
+    }
+
+    function showMenu() {
+      screen = 'menu';
+      paused = true;
+      ui.showMenu();
+    }
+
     window.addEventListener('resize', resize);
-    resize();
-
-    const lander = state.buildings[0];
-    CP.centerOn(view, state.map, lander.x + 4, lander.y);
-
     CP.attachInput(canvas, game);
     const ui = CP.createUI(game);
 
-    // Debug readout (?debug in the address): frames per second and work per frame.
+    // ?sandbox opens the stage-1 test map with 12 units; ?mission=2 jumps into a mission.
+    if (params.has('sandbox')) {
+      load(CP.createSandbox(Number(params.get('seed')) || 1));
+      screen = 'play';
+      paused = false;
+      ui.hideOverlay();
+    } else if (params.get('mission')) {
+      startMission(Number(params.get('mission')));
+    } else {
+      load(CP.createMission(1)); // something to show behind the menu
+      showMenu();
+    }
+
+    /** Reacts to what happened in the simulation: auto-pause, minimap pings, end of mission. */
+    function handleEvents(now) {
+      const state = game.state;
+      CP.takeEvents(game.renderer, state, now);
+      for (const e of state.events) {
+        if (e.type === 'spotted') {
+          ui.ping(e.x, e.y, now);
+          if (autoPause) paused = true;
+        } else if (e.type === 'win') {
+          CP.saveWin(state.mission.id);
+          endAt = now + 1500;
+          screen = 'end';
+          ui.endWin = true;
+        } else if (e.type === 'lose') {
+          endAt = now + 1500;
+          screen = 'end';
+          ui.endWin = false;
+        }
+      }
+      state.events.length = 0;
+    }
+
     const dbg = document.getElementById('debug');
     let frames = 0, fpsT = performance.now(), work = 0;
     if (debug) dbg.style.display = 'block';
@@ -57,17 +120,25 @@
       const dt = Math.min(0.25, (now - last) / 1000);
       last = now;
       const t0 = performance.now();
+      const state = game.state;
       CP.updateCamera(view, state.map, dt);
-      if (!paused) {
+      // The world keeps running a moment after the end, then the end screen shows.
+      const running = (screen === 'play' && !paused) || (screen === 'end' && endAt > 0);
+      if (running) {
         acc += dt * CP.SPEEDS[speed];
         while (acc >= step) {
           CP.tick(state);
           acc -= step;
         }
       }
+      handleEvents(now);
+      if (screen === 'end' && endAt > 0 && now >= endAt) {
+        endAt = 0;
+        ui.showEnd(ui.endWin);
+      }
       CP.updateHover(game);
-      CP.draw(renderer, state, view, game.alpha(), now);
-      ui.update(paused, speed);
+      CP.draw(game.renderer, state, view, game.alpha(), now);
+      ui.update(paused, speed, autoPause, now);
       if (debug) {
         work += performance.now() - t0;
         frames++;

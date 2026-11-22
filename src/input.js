@@ -1,6 +1,6 @@
 // Mouse and keyboard, Warcraft 2 style: left click and box select,
-// right click to send, arrows and screen edge to scroll, space to pause,
-// Ctrl + digit for groups. Everything here works during pause.
+// right click does the right thing, arrows and screen edge scroll,
+// space pauses, Ctrl + digit for groups. All of it works during pause.
 (function (CP) {
   'use strict';
 
@@ -14,6 +14,8 @@
       w: 0, h: 0, // size of the map view in CSS pixels
       bottomPad: 0, // map can scroll this far past its bottom edge (room for the HUD)
       selected: new Set(),
+      selectedBuilding: null,
+      placing: null, // { type, builderId, tile } while choosing where to build
       hover: null,
       box: null,
       groups: {},
@@ -60,14 +62,15 @@
     clampCamera(view, map);
   }
 
-  /** Our unit under a screen point (topmost wins), or null. */
+  /** The unit under a screen point (the one in front wins), or null. Only what you can see. */
   function unitAt(state, view, sx, sy, alpha) {
     let best = null, bestY = -Infinity;
-    const art = CP.UNIT_ART;
     for (const u of state.units) {
+      if (u.hidden) continue;
+      if (u.owner !== 'player' && !CP.isVisible(state, u.x, u.y)) continue;
+      const meta = CP.SPRITE_META[u.type];
       const p = CP.unitScreenPos(u, alpha, view.cam);
-      const halfW = 7 * S, top = (art.footY - 2) * S;
-      if (sx >= p.x - halfW && sx <= p.x + halfW && sy >= p.y - top && sy <= p.y + 4 && p.y > bestY) {
+      if (sx >= p.x - meta.hitW * S && sx <= p.x + meta.hitW * S && sy >= p.y - meta.hitH * S && sy <= p.y + 6 && p.y > bestY) {
         best = u;
         bestY = p.y;
       }
@@ -75,13 +78,36 @@
     return best;
   }
 
+  /** The building under a screen point, including the part of its picture above the footprint. */
+  function buildingAt(state, view, sx, sy) {
+    const t = screenToTile(view, sx, sy);
+    for (const b of state.buildings) {
+      const rise = (CP.SPRITE_RISE[b.type] || 0) / CP.ART_TILE;
+      if (t.x >= b.x && t.x < b.x + b.size && t.y >= b.y - rise && t.y < b.y + b.size) return b;
+    }
+    return null;
+  }
+
   function screenToTile(view, sx, sy) {
     return { x: (sx + view.cam.x) / TP, y: (sy + view.cam.y) / TP };
   }
 
+  /** Top-left tile for a building of `type` centred under the mouse. */
+  function placingTile(view, type) {
+    const size = CP.BUILDING_TYPES[type].size;
+    const t = screenToTile(view, view.mouse.x, view.mouse.y);
+    return { x: Math.floor(t.x - size / 2 + 0.5), y: Math.floor(t.y - size / 2 + 0.5) };
+  }
+
+  function selectUnits(view, ids) {
+    view.selected = new Set(ids);
+    view.selectedBuilding = null;
+    view.placing = null;
+  }
+
   /**
-   * Wires up all input. `game` gives access to the live state and
-   * actions: { state, view, renderer, alpha(), togglePause(), now() }.
+   * Wires up all input. `game` gives access to the live state and actions:
+   * { state, view, renderer, alpha(), togglePause(), now(), active() }.
    */
   function attachInput(canvas, game) {
     const { view } = game;
@@ -92,23 +118,47 @@
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
 
-    function order(sx, sy) {
-      if (!view.selected.size) return;
+    function rightClick(sx, sy) {
+      const state = game.state;
       const t = screenToTile(view, sx, sy);
-      CP.orderMove(game.state, [...view.selected], t.x, t.y);
-      CP.addMarker(game.renderer, t.x, t.y, game.now());
+      if (view.placing) { view.placing = null; return; }
+      if (view.selectedBuilding != null) {
+        const b = CP.buildingById(state, view.selectedBuilding);
+        if (b && CP.BUILDING_TYPES[b.type].trains) {
+          b.rally = { x: t.x, y: t.y };
+          CP.addMarker(game.renderer, t.x, t.y, game.now());
+        }
+        return;
+      }
+      if (!view.selected.size) return;
+      const what = CP.orderSmart(state, [...view.selected], t.x, t.y, unitAt(state, view, sx, sy, game.alpha()));
+      if (what) CP.addMarker(game.renderer, t.x, t.y, game.now(), what === 'attack' ? '255,64,48' : undefined);
+    }
+
+    function place() {
+      const g = view.placing;
+      const builder = CP.unitById(game.state, g.builderId);
+      const settlers = [...view.selected].map((id) => CP.unitById(game.state, id)).filter((u) => u && u.type === 'settler');
+      const builders = builder ? [builder, ...settlers.filter((u) => u !== builder)] : settlers;
+      if (!builders.length) { view.placing = null; return; }
+      const tile = placingTile(view, g.type);
+      const b = CP.placeBuilding(game.state, g.type, tile.x, tile.y, builders);
+      if (b) view.placing = null;
     }
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     canvas.addEventListener('mousedown', (e) => {
+      if (!game.active()) return;
       const p = local(e);
       // Right button, or Ctrl + click on a Mac trackpad.
       if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
-        order(p.x, p.y);
+        rightClick(p.x, p.y);
         return;
       }
-      if (e.button === 0) drag = { x0: p.x, y0: p.y, shift: e.shiftKey };
+      if (e.button !== 0) return;
+      if (view.placing) { place(); return; }
+      drag = { x0: p.x, y0: p.y, shift: e.shiftKey };
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -128,28 +178,34 @@
 
     window.addEventListener('mouseup', (e) => {
       if (e.button !== 0 || !drag) return;
+      const state = game.state;
       const p = local(e);
       const alpha = game.alpha();
       const add = drag.shift;
       if (view.box) {
         const b = view.box;
         const x0 = Math.min(b.x0, b.x1), x1 = Math.max(b.x0, b.x1), y0 = Math.min(b.y0, b.y1), y1 = Math.max(b.y0, b.y1);
-        const hit = game.state.units.filter((u) => {
-          if (u.owner !== 'player') return false;
+        const hit = state.units.filter((u) => {
+          if (u.owner !== 'player' || u.hidden) return false;
           const q = CP.unitScreenPos(u, alpha, view.cam);
           const cy = q.y - 10 * S;
           return q.x >= x0 && q.x <= x1 && cy >= y0 && cy <= y1;
         });
-        if (!add) view.selected.clear();
-        for (const u of hit) view.selected.add(u.id);
+        if (add) hit.forEach((u) => view.selected.add(u.id));
+        else selectUnits(view, hit.map((u) => u.id));
+        view.selectedBuilding = null;
       } else {
-        const u = unitAt(game.state, view, p.x, p.y, alpha);
-        if (add && u) {
+        const u = unitAt(state, view, p.x, p.y, alpha);
+        if (add && u && u.owner === 'player') {
           if (view.selected.has(u.id)) view.selected.delete(u.id);
           else view.selected.add(u.id);
+          view.selectedBuilding = null;
+        } else if (u) {
+          selectUnits(view, [u.id]);
         } else {
-          view.selected.clear();
-          if (u) view.selected.add(u.id);
+          const b = buildingAt(state, view, p.x, p.y);
+          selectUnits(view, []);
+          if (b) view.selectedBuilding = b.id;
         }
       }
       view.box = null;
@@ -161,9 +217,9 @@
       const p = local(e);
       const alpha = game.alpha();
       const u = unitAt(game.state, view, p.x, p.y, alpha);
-      if (!u) return;
+      if (!u || u.owner !== 'player') return;
       for (const o of game.state.units) {
-        if (o.type !== u.type || o.owner !== 'player') continue;
+        if (o.type !== u.type || o.owner !== 'player' || o.hidden) continue;
         const q = CP.unitScreenPos(o, alpha, view.cam);
         if (q.x >= 0 && q.y >= 0 && q.x <= view.w && q.y <= view.h) view.selected.add(o.id);
       }
@@ -175,13 +231,15 @@
         e.preventDefault();
         return;
       }
+      if (!game.active()) return;
       if (e.code === 'Space') {
         e.preventDefault();
         if (!e.repeat) game.togglePause();
         return;
       }
       if (e.key === 'Escape') {
-        view.selected.clear();
+        if (view.placing) view.placing = null;
+        else selectUnits(view, []);
         return;
       }
       const digit = /^Digit([0-9])$/.exec(e.code);
@@ -202,19 +260,26 @@
           centerOn(view, game.state.map, cx, cy);
         }
         view.lastGroupKey = { key: n, t: now };
-        view.selected = new Set(ids);
+        selectUnits(view, ids);
       }
     });
 
     window.addEventListener('keyup', (e) => view.keys.delete(e.key));
   }
 
-  /** Hover: which of our units is under the mouse (for the hearts bar and number). */
+  /** Per frame: hover target, placing ghost position, and dropping dead units from the selection. */
   function updateHover(game) {
-    const { view } = game;
+    const { view, state } = game;
     const m = view.mouse;
-    const u = m.inside && !view.box && m.x >= 0 && m.y >= 0 && m.x < view.w && m.y < view.h ? unitAt(game.state, view, m.x, m.y, game.alpha()) : null;
+    const onMap = m.inside && !view.box && m.x >= 0 && m.y >= 0 && m.x < view.w && m.y < view.h;
+    const u = onMap ? unitAt(state, view, m.x, m.y, game.alpha()) : null;
     view.hover = u ? u.id : null;
+    if (view.placing) view.placing.tile = onMap ? placingTile(view, view.placing.type) : null;
+    for (const id of view.selected) {
+      const s = CP.unitById(state, id);
+      if (!s || s.hidden) view.selected.delete(id);
+    }
+    if (view.selectedBuilding != null && !CP.buildingById(state, view.selectedBuilding)) view.selectedBuilding = null;
   }
 
   CP.createView = createView;

@@ -165,10 +165,10 @@ Gra to jedna strona HTML5 z canvasem w JavaScripcie, bez serwera, rozwijana w Cl
 
 Kolejność prac:
 
-1. Szkielet: mapa, kamera, zaznaczanie, ruch, aktywna pauza, mgła wojny. Grafika zastępcza.
-2. Ekonomia: osadnik, kryształy, złom, lądownik, kopuła.
-3. Walka: piechur, strzelec, robaki i ich gniazda.
-4. Misje 1 i 2 z docelową grafiką, potem test na Arturze.
+1. ✅ Szkielet: mapa, kamera, zaznaczanie, ruch, aktywna pauza, mgła wojny. Grafika zastępcza.
+2. ✅ Ekonomia: osadnik, kryształy, złom, lądownik, kopuła.
+3. ✅ Walka: piechur, strzelec, robaki i ich gniazda.
+4. ✅ Misje 1 i 2 z docelową grafiką, potem test na Arturze. ← tu jesteśmy: czeka test
 5. Poprawki po teście. Potem bohater, MAibawu, Strażnik, działo i misje 3–6.
 
 ## Parametry startowe
@@ -220,6 +220,22 @@ Obie misje są rozpisane do budowy. Pozostałe rozpiszemy po teście z Arturem.
 - **Robaki:** pierwszy wychodzi po 60 s, żeby Artur zdążył się rozejrzeć. Potem każde gniazdo wypuszcza małego robaka co 30 s, najwyżej 3 żywe na gniazdo. Najdalsze gniazdo raz wypuszcza dużego robaka.
 - **Zasypywanie:** osadnik stoi przy gnieździe 5 s, widać pasek postępu. Cios w osadnika przerywa zasypywanie.
 - **Cel:** zasyp 3 gniazda, licznik 0/3.
+
+## Stan prac i ustalenia z budowy
+
+Etapy 1–4 są zrobione (wersja 0.4.0). Misje 1 i 2 czekają na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
+
+- **Budynki są niezniszczalne.** Robaki atakują tylko jednostki. Dzięki temu lądownik zawsze zostaje, a Artur nie traci bazy.
+- **Przegrana:** nie zostaje żadna jednostka i nie da się zrobić osadnika (brak lądownika albo mniej niż 50 kryształów). Sam lądownik bez kryształów to przegrana, bo inaczej gra by stanęła.
+- **Robaki** krążą przy swoim gnieździe i atakują to, co podejdzie na 5 kafli. Gonią najdalej 14 kafli od gniazda. Uderzony z daleka robak rusza na tego, kto go trafił.
+- **Nasi wojownicy** (piechur, strzelec) sami atakują stwory, które widzą, gdy stoją bez rozkazu. Osadnicy sami nie walczą.
+- **Gniazda wypuszczają robaki po kolei:** pierwsze po 60 s, każde następne 10 s później, potem co 30 s. Duży robak wychodzi z najdalszego gniazda jako jego trzeci robak.
+- **Zasypywanie:** cios w zasypującego osadnika zeruje pasek gniazda, ale osadnik dalej zasypuje. Kilku osadników zasypuje szybciej.
+- **Mabmia** w tej wersji tylko chodzi za oswojonym osadnikiem, bez bonusu (otwarta decyzja nadal czeka na Grega).
+- **Autopauza** włącza się, gdy robak pierwszy raz pojawi się w zasięgu wzroku. Na minimapie widać wtedy czerwony sygnał.
+- **Cel misji 1** pokazuje się w czterech krokach: złom 0/60, kopuła 0/1, osadnicy 2/3, kryształy 0/100.
+- **Kolejka szkolenia:** najwyżej 5 jednostek w budynku. Koszt pobiera się przy dodaniu do kolejki, a kliknięcie w kolejkę oddaje surowce.
+- **Mapy misji 1 i 2** są stałe (to samo ziarno losowania), żeby każdy test wyglądał tak samo.
 
 ## Gotowość etapu 1
 

@@ -113,8 +113,114 @@
   .selText { font-size: 20px; font-weight: 600; line-height: 1.3; }
   .selNum { font-size: 24px; }
   .heart { color: #ff4a3a; }
+  .res {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 24px;
+    font-weight: 700;
+    min-width: 92px;
+  }
+  #resCrystal { color: #e0b8ff; }
+  #resScrap { color: #dcdce4; }
+  #resPop { color: #ffc27a; }
+  .icon16 { width: 20px; height: 20px; image-rendering: pixelated; }
+  .icon20 { width: 22px; height: 22px; image-rendering: pixelated; vertical-align: -3px; }
+  .icon24 { width: 30px; height: 30px; image-rendering: pixelated; }
+  .icon32 { width: 40px; height: 40px; image-rendering: pixelated; }
+  #goal {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--brass);
+    border-radius: 10px;
+  }
+  .goalNum { font-size: 28px; font-weight: 800; }
+  #goal.flash { animation: flash 1.2s ease-out; }
+  @keyframes flash {
+    0% { background: #4dff6a; transform: scale(1.3); }
+    100% { background: rgba(0, 0, 0, 0.3); transform: scale(1); }
+  }
+  #cmdPanel {
+    position: absolute;
+    right: 10px; bottom: 10px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(42, 20, 16, 0.92);
+    border: 3px solid var(--brass);
+    border-radius: 8px;
+    pointer-events: auto;
+    max-width: 280px;
+  }
+  button.cmd {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    padding: 6px 10px;
+    min-width: 220px;
+  }
+  button.cmd.off { opacity: 0.5; cursor: default; }
+  .cmdText { display: flex; flex-direction: column; gap: 2px; }
+  .cmdName { font-size: 20px; }
+  .cost { display: flex; gap: 12px; font-size: 20px; font-weight: 700; }
+  .costItem { display: flex; align-items: center; gap: 3px; }
+  .costItem.crystal { color: #e0b8ff; }
+  .costItem.scrap { color: #dcdce4; }
+  .costItem.short { color: #ff6a50; }
+  .popWarn { color: #ff6a50; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .bicon { width: 56px; height: 56px; image-rendering: pixelated; object-fit: contain; }
+  .uicon { width: 36px; height: 48px; image-rendering: pixelated; }
+  .bpic { width: 80px; height: 80px; image-rendering: pixelated; object-fit: contain; }
+  .portrait.mabmia { width: 44px; height: 72px; }
+  .portrait.wormSmall { width: 66px; height: 48px; }
+  .portrait.wormBig { width: 78px; height: 56px; }
+  .queue { display: flex; gap: 4px; flex-wrap: wrap; }
+  .qItem { padding: 2px 4px; }
+  .qItem.first { border-color: #5ac8ff; }
+  .qicon { width: 27px; height: 36px; image-rendering: pixelated; }
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 4, 6, 0.72);
+    z-index: 10;
+  }
+  .menuBox {
+    padding: 28px 40px 36px;
+    background: linear-gradient(#4a2418, #2a1410);
+    border: 4px solid var(--brass);
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+  .menuBox h1 { font-size: 48px; margin: 0 0 24px; color: var(--brass-light); letter-spacing: 1px; }
+  .missions { display: flex; gap: 20px; justify-content: center; }
+  button.mission {
+    position: relative;
+    width: 200px;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .mNum { font-size: 56px; font-weight: 800; color: var(--brass-light); line-height: 1; }
+  .mName { font-size: 24px; }
+  button.mission.locked { opacity: 0.45; cursor: default; }
+  .lock { position: absolute; top: 8px; right: 10px; font-size: 26px; }
+  .endRow { display: flex; gap: 20px; justify-content: center; }
+  button.big { font-size: 30px; padding: 12px 36px; }
   #tip {
     display: none;
+    align-items: center;
+    gap: 4px;
     position: fixed;
     padding: 2px 10px;
     font-size: 22px;
@@ -148,7 +254,14 @@
 <body>
   <div id="topbar">
     <button id="pauseBtn"></button>
+    <button id="menuBtn"></button>
+    <div class="res" id="resCrystal"><span id="resCrystalNum">0</span></div>
+    <div class="res" id="resScrap"><span id="resScrapNum">0</span></div>
+    <div class="res" id="resPop"><span id="resPopNum">0</span></div>
     <div class="spacer"></div>
+    <div id="goal"></div>
+    <div class="spacer"></div>
+    <button id="autoPauseBtn"></button>
     <button id="speed-slow"></button>
     <button id="speed-normal"></button>
     <button id="speed-fast"></button>
@@ -158,8 +271,10 @@
   <div id="bottomHud">
     <div id="minimapBox"><canvas id="minimap"></canvas></div>
     <div id="selPanel"></div>
+    <div id="cmdPanel"></div>
   </div>
   <div id="tip"></div>
+  <div id="overlay"></div>
   <div id="version"></div>
   <div id="debug"></div>
 
@@ -171,7 +286,12 @@
   <script src="src/map.js"></script>
   <script src="src/path.js"></script>
   <script src="src/sim.js"></script>
+  <script src="src/econ.js"></script>
+  <script src="src/combat.js"></script>
+  <script src="src/missions.js"></script>
   <script src="src/sprites.js"></script>
+  <script src="src/creatures.js"></script>
+  <script src="src/objects.js"></script>
   <script src="src/render.js"></script>
   <script src="src/input.js"></script>
   <script src="src/ui.js"></script>

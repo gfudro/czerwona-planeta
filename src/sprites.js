@@ -38,7 +38,8 @@
     c.hline(6, 13, 15, PAL.leather).px(10, 15, PAL.brassLight);
     // Arm with a pick.
     c.rect(11, 11, 2, 4, PAL.teamDark);
-    c.line(13, 15, 15, 9, PAL.leather).hline(14, 17, 9, PAL.steel).px(17, 10, PAL.steel);
+    if (step === 3) c.line(12, 12, 15, 2, PAL.leather).hline(13, 17, 2, PAL.steel).px(17, 3, PAL.steel); // pick raised
+    else c.line(13, 15, 15, 9, PAL.leather).hline(14, 17, 9, PAL.steel).px(17, 10, PAL.steel);
     // Glass helmet.
     c.ellipse(9.5, 5, 4, 4, PAL.brass);
     c.ellipse(10.5, 5, 2.6, 2.6, PAL.glassDark).px(10, 4, PAL.glass).px(11, 4, PAL.glass).px(10, 3, 0xffffff);
@@ -85,12 +86,21 @@
   const PAINT = { settler, infantry, rifleman, cannon: infantry, hero: infantry };
   const cache = new Map();
 
-  /** A unit sprite as a canvas; frame 0 standing, 1–2 walking; flip for facing left. */
+  Object.assign((CP.SPRITE_META = CP.SPRITE_META || {}), {
+    settler: { footX: 9, footY: 23, hitW: 7, hitH: 22 },
+    infantry: { footX: 9, footY: 23, hitW: 8, hitH: 23 },
+    rifleman: { footX: 9, footY: 23, hitW: 7, hitH: 22 },
+    cannon: { footX: 9, footY: 23, hitW: 8, hitH: 23 },
+    hero: { footX: 9, footY: 23, hitW: 8, hitH: 23 },
+  });
+
+  /** A unit or creature sprite as a canvas. Frame 0 standing, 1–2 walking, 3 working; flip faces left. */
   CP.unitSprite = function (type, frame, flip) {
     const key = `${type}:${frame}:${flip ? 1 : 0}`;
     let s = cache.get(key);
     if (!s) {
-      let pc = PAINT[type](frame);
+      const paint = PAINT[type] || CP.CREATURE_PAINT[type];
+      let pc = paint(frame);
       if (flip) pc = pc.flipped();
       s = pc.toCanvas();
       cache.set(key, s);

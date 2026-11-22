@@ -1,90 +1,145 @@
-// HTML interface over the canvas: top bar (pause, speeds), pause badge,
-// minimap, selection panel, hearts tooltip and version number.
+// HTML interface over the canvas: top bar (resources, goal, pause, speeds),
+// minimap, selection and command panels, hearts tooltip, menu and end screens.
 (function (CP) {
   'use strict';
 
   const MM = 4; // minimap pixels per tile
+  const el = (id) => document.getElementById(id);
 
-  function el(id) { return document.getElementById(id); }
+  function h(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /** An icon (or a unit's portrait) as a crisp <canvas>, scaled by CSS. */
+  function iconEl(canvas, cls) {
+    const c = document.createElement('canvas');
+    c.width = canvas.width;
+    c.height = canvas.height;
+    c.getContext('2d').drawImage(canvas, 0, 0);
+    c.className = cls;
+    return c;
+  }
+
+  function goalIcon(name) {
+    return name === 'settler' ? CP.icon('settler') : CP.icon(name);
+  }
+
+  /** Cost as coloured numbers with icons, like in Gród. */
+  function costEl(cost, state) {
+    const box = h('div', 'cost');
+    const parts = [['crystal', cost[0], state.res.crystals], ['scrap', cost[1], state.res.scrap]];
+    for (const [icon, need, have] of parts) {
+      if (!need) continue;
+      const item = h('span', 'costItem ' + icon + (have < need ? ' short' : ''));
+      item.appendChild(iconEl(CP.icon(icon), 'icon16'));
+      item.appendChild(document.createTextNode(String(need)));
+      box.appendChild(item);
+    }
+    return box;
+  }
 
   function createUI(game) {
-    const { state, view } = game;
-    const map = state.map;
     const STR = CP.STR;
+    const { view } = game;
 
-    // Top bar.
+    // ---- Top bar ----
     el('pauseBtn').addEventListener('click', () => game.togglePause());
+    el('menuBtn').textContent = STR.menu;
+    el('menuBtn').addEventListener('click', () => game.showMenu());
     for (const s of ['slow', 'normal', 'fast']) {
       const b = el('speed-' + s);
       b.textContent = STR[s];
       b.addEventListener('click', () => game.setSpeed(s));
     }
+    el('autoPauseBtn').textContent = STR.autoPause;
+    el('autoPauseBtn').addEventListener('click', () => game.toggleAutoPause());
     el('version').textContent = 'v' + CP.VERSION;
     el('pauseBadge').textContent = STR.pause;
+    el('resCrystal').prepend(iconEl(CP.icon('crystal'), 'icon24'));
+    el('resScrap').prepend(iconEl(CP.icon('scrap'), 'icon24'));
+    el('resPop').prepend(iconEl(CP.icon('pop'), 'icon24'));
 
-    // Minimap.
+    // ---- Minimap ----
     const mm = el('minimap');
-    const dpr = window.devicePixelRatio || 1;
-    mm.width = map.w * MM * dpr;
-    mm.height = map.h * MM * dpr;
-    mm.style.width = map.w * MM + 'px';
-    mm.style.height = map.h * MM + 'px';
     const mctx = mm.getContext('2d');
-    const base = document.createElement('canvas');
-    base.width = map.w;
-    base.height = map.h;
-    const bctx = base.getContext('2d');
-    const COLORS = { [CP.T.SAND]: '#c4623a', [CP.T.DUNE]: '#a84e2e', [CP.T.ROCK]: '#4e2418', [CP.T.CRACK]: '#24100c' };
-    for (let y = 0; y < map.h; y++)
-      for (let x = 0; x < map.w; x++) {
-        bctx.fillStyle = COLORS[map.terrain[y * map.w + x]];
-        bctx.fillRect(x, y, 1, 1);
-      }
-    const fog = document.createElement('canvas');
-    fog.width = map.w;
-    fog.height = map.h;
-    const fctx = fog.getContext('2d');
-    const fimg = fctx.createImageData(map.w, map.h);
+    const dpr = window.devicePixelRatio || 1;
+    let base = null, fog = null, fctx = null, fimg = null;
+    const pings = [];
+
+    function setupMinimap() {
+      const map = game.state.map;
+      mm.width = map.w * MM * dpr;
+      mm.height = map.h * MM * dpr;
+      mm.style.width = map.w * MM + 'px';
+      mm.style.height = map.h * MM + 'px';
+      base = document.createElement('canvas');
+      base.width = map.w;
+      base.height = map.h;
+      const bctx = base.getContext('2d');
+      const COLORS = { [CP.T.SAND]: '#c4623a', [CP.T.DUNE]: '#a84e2e', [CP.T.ROCK]: '#4e2418', [CP.T.CRACK]: '#24100c' };
+      for (let y = 0; y < map.h; y++)
+        for (let x = 0; x < map.w; x++) {
+          bctx.fillStyle = COLORS[map.terrain[y * map.w + x]];
+          bctx.fillRect(x, y, 1, 1);
+        }
+      fog = document.createElement('canvas');
+      fog.width = map.w;
+      fog.height = map.h;
+      fctx = fog.getContext('2d');
+      fimg = fctx.createImageData(map.w, map.h);
+      pings.length = 0;
+    }
 
     function minimapTile(e) {
       const r = mm.getBoundingClientRect();
+      const map = game.state.map;
       return { x: ((e.clientX - r.left) / r.width) * map.w, y: ((e.clientY - r.top) / r.height) * map.h };
     }
     let mmDrag = false;
     mm.addEventListener('contextmenu', (e) => e.preventDefault());
     mm.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      if (!game.active()) return;
       const t = minimapTile(e);
       if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
         if (view.selected.size) {
-          CP.orderMove(state, [...view.selected], t.x, t.y);
-          CP.addMarker(game.renderer, t.x, t.y, game.now());
+          const what = CP.orderSmart(game.state, [...view.selected], t.x, t.y);
+          if (what) CP.addMarker(game.renderer, t.x, t.y, game.now());
         }
         return;
       }
       if (e.button === 0) {
         mmDrag = true;
-        CP.centerOn(view, map, t.x, t.y);
+        CP.centerOn(view, game.state.map, t.x, t.y);
       }
     });
     window.addEventListener('mousemove', (e) => {
       if (!mmDrag) return;
       const t = minimapTile(e);
+      const map = game.state.map;
       CP.centerOn(view, map, Math.max(0, Math.min(map.w, t.x)), Math.max(0, Math.min(map.h, t.y)));
     });
     window.addEventListener('mouseup', () => { mmDrag = false; });
 
-    function drawMinimap() {
+    function drawMinimap(now) {
+      const state = game.state;
       mctx.setTransform(dpr * MM, 0, 0, dpr * MM, 0, 0);
       mctx.imageSmoothingEnabled = false;
       mctx.drawImage(base, 0, 0);
+      for (const n of state.nodes) {
+        mctx.fillStyle = n.kind === 'crystal' ? '#b07ae8' : '#8a8c94';
+        mctx.fillRect(n.x, n.y, n.size, n.size);
+      }
+      for (const n of state.nests) {
+        mctx.fillStyle = '#1a0806';
+        mctx.fillRect(n.x, n.y, 1, 1);
+      }
       for (const b of state.buildings) {
         mctx.fillStyle = '#e0b050';
         mctx.fillRect(b.x, b.y, b.size, b.size);
-      }
-      for (const u of state.units) {
-        mctx.fillStyle = view.selected.has(u.id) ? '#4dff6a' : '#ff9a2a';
-        mctx.fillRect(u.x - 0.6, u.y - 0.6, 1.2, 1.2);
       }
       const d = fimg.data;
       for (let i = 0; i < state.fog.length; i++) {
@@ -93,72 +148,253 @@
       }
       fctx.putImageData(fimg, 0, 0);
       mctx.drawImage(fog, 0, 0);
+      for (const u of state.units) {
+        if (u.hidden) continue;
+        if (u.owner !== 'player' && !CP.isVisible(state, u.x, u.y)) continue;
+        mctx.fillStyle = u.owner === 'wild' ? '#ff3a2a' : u.owner === 'neutral' ? '#ff8ab0' : view.selected.has(u.id) ? '#4dff6a' : '#ff9a2a';
+        mctx.fillRect(u.x - 0.7, u.y - 0.7, 1.4, 1.4);
+      }
+      for (let i = pings.length - 1; i >= 0; i--) {
+        const k = (now - pings[i].t) / 1500;
+        if (k >= 1) { pings.splice(i, 1); continue; }
+        mctx.strokeStyle = `rgba(255,60,40,${1 - k})`;
+        mctx.lineWidth = 0.6;
+        mctx.beginPath();
+        mctx.arc(pings[i].x, pings[i].y, 1 + k * 5, 0, Math.PI * 2);
+        mctx.stroke();
+      }
+      const TP = CP.TILE_PX;
       mctx.strokeStyle = '#ffffff';
       mctx.lineWidth = 2 / MM;
-      const TP = CP.TILE_PX;
       mctx.strokeRect(view.cam.x / TP, view.cam.y / TP, view.w / TP, view.h / TP);
     }
 
-    // Selection panel: a portrait and number per kind of unit; one unit shows its hearts.
-    let lastSel = '';
+    // ---- Selection and commands ----
     const panel = el('selPanel');
-    function drawSelection() {
+    const cmd = el('cmdPanel');
+    let lastKey = '';
+
+    function selectionInfo(state) {
       const units = [...view.selected].map((id) => CP.unitById(state, id)).filter(Boolean);
-      const key = units.map((u) => u.id + ':' + u.hearts).join(',');
-      if (key === lastSel) return;
-      lastSel = key;
+      const b = view.selectedBuilding != null ? CP.buildingById(state, view.selectedBuilding) : null;
+      return { units, b };
+    }
+
+    function card(pic, name, line) {
+      const c = h('div', 'selCard');
+      c.appendChild(pic);
+      const txt = h('div', 'selText');
+      txt.appendChild(h('div', null, name));
+      if (line) txt.appendChild(line);
+      c.appendChild(txt);
+      return c;
+    }
+
+    function heartsLine(hearts, max) {
+      const n = h('div', 'selNum');
+      n.appendChild(iconEl(CP.icon('heart'), 'icon20'));
+      n.appendChild(document.createTextNode(` ${hearts}/${max}`));
+      return n;
+    }
+
+    function buildSelection(state, { units, b }) {
       panel.innerHTML = '';
-      panel.style.display = units.length ? 'flex' : 'none';
-      if (!units.length) return;
+      if (b) {
+        const pic = iconEl(CP.objectSprite(b.type), 'bpic');
+        let line = null;
+        if (!b.built) line = h('div', 'selNum', Math.floor(b.progress * 100) + '%');
+        else if (CP.BUILDING_TYPES[b.type].pop) {
+          line = h('div', 'selNum');
+          line.appendChild(iconEl(CP.icon('pop'), 'icon20'));
+          line.appendChild(document.createTextNode(' +' + CP.BUILDING_TYPES[b.type].pop));
+        }
+        panel.appendChild(card(pic, STR.buildings[b.type], line));
+        return;
+      }
       const byType = new Map();
       for (const u of units) byType.set(u.type, (byType.get(u.type) || []).concat(u));
       for (const [type, list] of byType) {
-        const card = document.createElement('div');
-        card.className = 'selCard';
-        const img = CP.unitSprite(type, 0, false);
-        const pic = document.createElement('canvas');
-        pic.width = img.width;
-        pic.height = img.height;
-        pic.getContext('2d').drawImage(img, 0, 0);
-        pic.className = 'portrait';
-        card.appendChild(pic);
-        const txt = document.createElement('div');
-        txt.className = 'selText';
-        const name = document.createElement('div');
-        name.textContent = STR.units[type];
-        txt.appendChild(name);
-        const num = document.createElement('div');
-        num.className = 'selNum';
-        if (list.length === 1) num.innerHTML = `<span class="heart">♥</span> ${list[0].hearts}/${CP.UNIT_TYPES[type].hearts}`;
-        else num.textContent = '× ' + list.length;
-        txt.appendChild(num);
-        card.appendChild(txt);
-        panel.appendChild(card);
+        const pic = iconEl(CP.unitSprite(type, 0, false), 'portrait ' + type);
+        const line = list.length === 1 ? heartsLine(list[0].hearts, CP.UNIT_TYPES[type].hearts) : h('div', 'selNum', '× ' + list.length);
+        panel.appendChild(card(pic, STR.units[type], line));
       }
+    }
+
+    function cmdButton(pic, name, cost, state, enabled, onClick) {
+      const btn = h('button', 'cmd' + (enabled ? '' : ' off'));
+      btn.appendChild(pic);
+      const txt = h('div', 'cmdText');
+      txt.appendChild(h('div', 'cmdName', name));
+      txt.appendChild(costEl(cost, state));
+      btn.appendChild(txt);
+      btn.addEventListener('mousedown', (e) => e.stopPropagation());
+      btn.addEventListener('click', (e) => { e.stopPropagation(); if (enabled) onClick(); });
+      return btn;
+    }
+
+    function buildCommands(state, { units, b }) {
+      cmd.innerHTML = '';
+      const settlers = units.filter((u) => u.type === 'settler' && u.owner === 'player');
+      if (settlers.length && !b) {
+        for (const type of CP.SETTLER_BUILDS) {
+          const def = CP.BUILDING_TYPES[type];
+          const ok = CP.canAfford(state, def.cost);
+          cmd.appendChild(cmdButton(iconEl(CP.objectSprite(type), 'bicon'), STR.buildings[type], def.cost, state, ok, () => {
+            view.placing = { type, builderId: settlers[0].id, tile: null };
+          }));
+        }
+      }
+      if (b && b.built && CP.BUILDING_TYPES[b.type].trains) {
+        for (const type of CP.BUILDING_TYPES[b.type].trains) {
+          const blocker = CP.trainBlocker(state, b, type);
+          const btn = cmdButton(iconEl(CP.unitSprite(type, 0, false), 'uicon'), STR.units[type], CP.UNIT_TYPES[type].cost, state, !blocker, () => CP.train(state, b, type));
+          if (blocker === 'pop') {
+            const warn = h('span', 'popWarn');
+            warn.appendChild(iconEl(CP.icon('pop'), 'icon20'));
+            warn.appendChild(document.createTextNode(`${CP.popUsed(state)}/${CP.popCap(state)}`));
+            btn.querySelector('.cmdText').appendChild(warn);
+          }
+          cmd.appendChild(btn);
+        }
+        if (b.queue.length) {
+          const q = h('div', 'queue');
+          b.queue.forEach((type, i) => {
+            const qb = h('button', 'qItem' + (i === 0 ? ' first' : ''));
+            qb.appendChild(iconEl(CP.unitSprite(type, 0, false), 'qicon'));
+            qb.addEventListener('mousedown', (e) => e.stopPropagation());
+            qb.addEventListener('click', () => CP.cancelTrain(state, b, i));
+            q.appendChild(qb);
+          });
+          cmd.appendChild(q);
+        }
+      }
+      cmd.style.display = cmd.childNodes.length ? 'flex' : 'none';
     }
 
     // Hearts number next to the cursor when hovering a unit.
     const tip = el('tip');
     function drawTip() {
-      const u = view.hover != null ? CP.unitById(state, view.hover) : null;
+      const u = view.hover != null ? CP.unitById(game.state, view.hover) : null;
       if (!u) { tip.style.display = 'none'; return; }
-      tip.style.display = 'block';
-      tip.innerHTML = `<span class="heart">♥</span> ${u.hearts}`;
+      tip.style.display = 'flex';
+      tip.innerHTML = '';
+      tip.appendChild(iconEl(CP.icon('heart'), 'icon20'));
+      tip.appendChild(document.createTextNode(' ' + u.hearts));
       tip.style.left = view.mouse.cx + 18 + 'px';
       tip.style.top = view.mouse.cy + 14 + 'px';
     }
 
-    function update(paused, speed) {
-      el('pauseBadge').style.display = paused ? 'block' : 'none';
+    // ---- Goal ----
+    let lastGoal = '';
+    function drawGoal(state) {
+      const g = state.mission ? CP.currentGoal(state) : null;
+      const box = el('goal');
+      const key = g ? `${g.icon}:${g.value}:${g.target}` : 'none';
+      if (key === lastGoal) return;
+      const changedStep = lastGoal.split(':')[0] !== key.split(':')[0];
+      lastGoal = key;
+      box.innerHTML = '';
+      if (!g) { box.style.display = 'none'; return; }
+      box.style.display = 'flex';
+      box.appendChild(iconEl(goalIcon(g.icon), 'icon32'));
+      box.appendChild(h('span', 'goalNum', `${g.value}/${g.target}`));
+      if (changedStep && g.index > 0) {
+        box.classList.remove('flash');
+        void box.offsetWidth; // restart the animation
+        box.classList.add('flash');
+      }
+    }
+
+    function update(paused, speed, autoPause, now) {
+      const state = game.state;
+      el('pauseBadge').style.display = paused && game.active() ? 'block' : 'none';
       el('pauseBtn').textContent = paused ? STR.play : STR.pause;
       el('pauseBtn').classList.toggle('on', paused);
+      el('autoPauseBtn').classList.toggle('on', autoPause);
       for (const s of ['slow', 'normal', 'fast']) el('speed-' + s).classList.toggle('on', s === speed);
-      drawMinimap();
-      drawSelection();
+      el('resCrystalNum').textContent = state.res.crystals;
+      el('resScrapNum').textContent = state.res.scrap;
+      const used = state.units.filter((u) => u.owner === 'player').length;
+      el('resPopNum').textContent = `${used}/${CP.popCap(state)}`;
+      drawGoal(state);
+      drawMinimap(now);
+      const sel = selectionInfo(state);
+      const b = sel.b;
+      const key = [
+        sel.units.map((u) => u.id + ':' + u.hearts).join(','),
+        b ? `${b.id}:${b.built}:${Math.floor(b.progress * 100)}:${b.queue.join('.')}` : '',
+        state.res.crystals, state.res.scrap, CP.popUsed(state), CP.popCap(state), view.placing ? view.placing.type : '',
+      ].join('|');
+      if (key !== lastKey) {
+        lastKey = key;
+        buildSelection(state, sel);
+        buildCommands(state, sel);
+        panel.style.display = panel.childNodes.length ? 'flex' : 'none';
+      }
       drawTip();
     }
 
-    return { update };
+    function ping(x, y, now) {
+      pings.push({ x, y, t: now });
+    }
+
+    // ---- Menu and end screens ----
+    function showMenu() {
+      const ov = el('overlay');
+      ov.innerHTML = '';
+      ov.style.display = 'flex';
+      const box = h('div', 'menuBox');
+      box.appendChild(h('h1', null, STR.title));
+      const list = h('div', 'missions');
+      for (let id = 1; id <= CP.MISSION_COUNT; id++) {
+        const open = CP.isUnlocked(id);
+        const won = CP.loadProgress().won.includes(id);
+        const b = h('button', 'mission' + (open ? '' : ' locked'));
+        b.appendChild(h('div', 'mNum', String(id)));
+        b.appendChild(h('div', 'mName', CP.MISSIONS[id].name));
+        if (won) b.appendChild(iconEl(CP.icon('check'), 'icon32'));
+        if (!open) b.appendChild(h('div', 'lock', '🔒'));
+        if (open) b.addEventListener('click', () => game.startMission(id));
+        list.appendChild(b);
+      }
+      box.appendChild(list);
+      ov.appendChild(box);
+    }
+
+    function showEnd(win) {
+      const ov = el('overlay');
+      ov.innerHTML = '';
+      ov.style.display = 'flex';
+      const box = h('div', 'menuBox end');
+      box.appendChild(h('h1', null, win ? STR.win : STR.lose));
+      const row = h('div', 'endRow');
+      if (win) {
+        const b = h('button', 'big', STR.next);
+        b.addEventListener('click', () => game.showMenu());
+        row.appendChild(b);
+      } else {
+        const again = h('button', 'big', STR.again);
+        again.addEventListener('click', () => game.startMission(game.state.mission.id));
+        row.appendChild(again);
+        const menu = h('button', 'big', STR.menu);
+        menu.addEventListener('click', () => game.showMenu());
+        row.appendChild(menu);
+      }
+      box.appendChild(row);
+      ov.appendChild(box);
+    }
+
+    function hideOverlay() {
+      el('overlay').style.display = 'none';
+    }
+
+    function reset() {
+      setupMinimap();
+      lastKey = '';
+      lastGoal = '';
+    }
+
+    return { update, ping, showMenu, showEnd, hideOverlay, reset };
   }
 
   CP.createUI = createUI;

@@ -6,9 +6,10 @@ const path = require('path');
 const vm = require('vm');
 
 const root = path.join(__dirname, '..');
-const ctx = { window: {}, console, Math };
+const store = {};
+const ctx = { window: {}, console, Math, JSON, localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } } };
 vm.createContext(ctx);
-for (const f of ['rng', 'data', 'strings', 'pixel', 'map', 'path', 'sim']) {
+for (const f of ['rng', 'data', 'strings', 'pixel', 'map', 'path', 'sim', 'econ', 'combat', 'missions']) {
   vm.runInContext(fs.readFileSync(path.join(root, 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
 }
 const CP = ctx.window.CP;
@@ -24,7 +25,7 @@ function run(state, seconds) {
 }
 
 function allArrived(state) {
-  return state.units.every((u) => u.path.length === 0);
+  return state.units.every((u) => u.path.length === 0 && !u.order);
 }
 
 // 1. Path avoids rock and never cuts a corner.
@@ -54,11 +55,11 @@ function allArrived(state) {
   const ids = state.units.map((u) => u.id);
   const groupA = ids.slice(0, 6), groupB = ids.slice(6);
   // Send group B to the far side first, then both groups through the pass in opposite directions.
-  CP.orderMove(state, groupB, 30, 34);
+  CP.orderMove(state, groupB.map((id) => CP.unitById(state, id)), 30, 34);
   run(state, 30);
   check('group B reached the far side', allArrived(state) && groupB.every((id) => CP.unitById(state, id).x > 26));
-  CP.orderMove(state, groupA, 30, 36);
-  CP.orderMove(state, groupB, 18, 36);
+  CP.orderMove(state, groupA.map((id) => CP.unitById(state, id)), 30, 36);
+  CP.orderMove(state, groupB.map((id) => CP.unitById(state, id)), 18, 36);
   let t = 0;
   while (!allArrived(state) && t < 60 * CP.SIM_HZ) { CP.tick(state); t++; }
   const A = groupA.map((id) => CP.unitById(state, id)), B = groupB.map((id) => CP.unitById(state, id));
@@ -76,7 +77,7 @@ function allArrived(state) {
   const state = CP.createSandbox(1);
   const u = state.units[0];
   const x0 = u.x;
-  CP.orderMove(state, [u.id], 20, 40);
+  CP.orderMove(state, [u], 20, 40);
   check('order in pause sets a path but does not move', u.path.length > 0 && u.x === x0);
   run(state, 2);
   check('order runs after resuming', u.x !== x0);
@@ -89,11 +90,11 @@ function allArrived(state) {
   const vis = f.filter((v) => v === CP.FOG.VISIBLE).length;
   check('fog: base visible, far corner hidden', vis > 30 && f[1 * 48 + 46] === CP.FOG.HIDDEN);
   const u = state.units[0];
-  CP.orderMove(state, [u.id], 40, 40);
+  CP.orderMove(state, [u], 40, 40);
   run(state, 30);
   const sx = Math.floor(state.units[1].x), sy = Math.floor(state.units[1].y);
   check('fog: unit far away reveals its area, base area stays visible', f[40 * 48 + 40] === CP.FOG.VISIBLE && f[sy * 48 + sx] === CP.FOG.VISIBLE);
-  CP.orderMove(state, [u.id], 10, 40);
+  CP.orderMove(state, [u], 10, 40);
   run(state, 30);
   check('fog: left area becomes explored, not hidden', f[40 * 48 + 44] === CP.FOG.EXPLORED);
 }
@@ -105,6 +106,153 @@ function allArrived(state) {
   for (let i = 0; i < 100; i++) CP.findPath(state.map, 5, 40, 44, 3);
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / 100;
   check('A* across the map is fast', ms < 5, `${ms.toFixed(2)} ms`);
+}
+
+
+// 7. Economy: settlers gather scrap and crystals, unload at the lander, carry on by themselves.
+{
+  const state = CP.createMission(1);
+  const [a, b] = state.units.filter((u) => u.type === 'settler');
+  const wreck = state.nodes.find((n) => n.kind === 'wreck');
+  const deposit = state.nodes.find((n) => n.kind === 'crystal');
+  CP.orderSmart(state, [a.id], wreck.x + 1, wreck.y + 1);
+  CP.orderSmart(state, [b.id], deposit.x + 1, deposit.y + 1);
+  run(state, 60);
+  check('settler brings scrap back from a wreck', state.gathered.scrap >= 30, `${state.gathered.scrap} scrap in 60 s`);
+  check('settler brings crystals back from the deposit', state.gathered.crystals >= 30, `${state.gathered.crystals} crystals in 60 s`);
+  check('resources counted', state.res.scrap === state.gathered.scrap && state.res.crystals === 50 + state.gathered.crystals);
+}
+
+// 8. Unit limit and training.
+{
+  const state = CP.createMission(1);
+  const lander = state.buildings[0];
+  check('unit limit from the lander is 4', CP.popCap(state) === 4);
+  state.res.crystals = 500;
+  CP.train(state, lander, 'settler');
+  CP.train(state, lander, 'settler');
+  check('third settler in queue is blocked by the limit', CP.trainBlocker(state, lander, 'settler') === 'pop');
+  run(state, 21);
+  check('two settlers trained in 20 s', state.units.filter((u) => u.type === 'settler').length === 4 && state.res.crystals === 400);
+  CP.cancelTrain(state, lander, 0);
+}
+
+// 9. Building a dome raises the limit by 4.
+{
+  const state = CP.createMission(1);
+  state.res.scrap = 60;
+  const s = state.units.find((u) => u.type === 'settler');
+  const spot = { x: 9, y: 44 };
+  let placed = null;
+  for (let dy = -4; dy <= 0 && !placed; dy++) for (let dx = 0; dx < 6 && !placed; dx++) placed = CP.placeBuilding(state, 'dome', spot.x + dx, spot.y + dy, [s]);
+  check('dome placed and paid', !!placed && state.res.scrap === 0);
+  run(state, 25);
+  check('dome built in 20 s and limit is 8', placed && placed.built && CP.popCap(state) === 8);
+}
+
+// 10. Mission 1 can be won: play it with simple orders.
+{
+  const state = CP.createMission(1);
+  const lander = state.buildings[0];
+  const wrecks = state.nodes.filter((n) => n.kind === 'wreck');
+  const deposit = state.nodes.find((n) => n.kind === 'crystal');
+  const [a, b] = state.units.filter((u) => u.type === 'settler');
+  CP.orderSmart(state, [a.id], wrecks[0].x, wrecks[0].y);
+  CP.orderSmart(state, [b.id], wrecks[1].x, wrecks[1].y);
+  let dome = null, trained = false;
+  for (let t = 0; t < 600 * CP.SIM_HZ && !state.mission.result; t++) {
+    CP.tick(state);
+    if (!dome && state.res.scrap >= 60) {
+      for (let y = 36; y < 46 && !dome; y++) for (let x = 7; x < 14 && !dome; x++) dome = CP.placeBuilding(state, 'dome', x, y, [a]);
+    }
+    if (dome && dome.built && !trained && state.res.crystals >= 50) { trained = CP.train(state, lander, 'settler'); }
+    if (dome && dome.built && !a.order) CP.orderSmart(state, [a.id], deposit.x, deposit.y);
+    if (state.units.filter((u) => u.type === 'settler').length >= 3) {
+      for (const u of state.units) if (u.type === 'settler' && !u.order) CP.orderSmart(state, [u.id], deposit.x, deposit.y);
+    }
+    state.events.length = 0;
+  }
+  check('mission 1 is won', state.mission.result === 'win', `at ${state.time.toFixed(0)} s, goal ${state.mission.goal}/4`);
+  check('mission 2 unlocked after winning 1', (CP.saveWin(1), CP.isUnlocked(2)));
+}
+
+// 11. Mission 2 setup and combat.
+{
+  const state = CP.createMission(2);
+  const lander = state.buildings.find((b) => b.type === 'lander');
+  const cx = lander.x + 1.5, cy = lander.y + 1.5;
+  const d = state.nests.map((n) => Math.hypot(n.x - cx, n.y - cy));
+  check('3 nests 12–25 tiles from the lander', state.nests.length === 3 && d.every((v) => v >= 11.5 && v <= 25.5), d.map((v) => v.toFixed(1)).join(', '));
+  check('nests start hidden in the fog', state.nests.every((n) => state.fog[n.y * 48 + n.x] === CP.FOG.HIDDEN));
+  check('start: 3 settlers, 2 infantry, 1 rifleman, 150/100', state.units.filter((u) => u.type === 'settler').length === 3 && state.units.filter((u) => u.type === 'infantry').length === 2 && state.units.filter((u) => u.type === 'rifleman').length === 1 && state.res.crystals === 150 && state.res.scrap === 100);
+  run(state, 59);
+  check('no worm before 60 s', !state.units.some((u) => u.owner === 'wild'));
+  run(state, 2);
+  check('first worm at 60 s', state.units.filter((u) => u.owner === 'wild').length === 1);
+  // Damage rules.
+  const inf = state.units.find((u) => u.type === 'infantry');
+  const w = state.units.find((u) => u.owner === 'wild');
+  let min = 99, max = 0;
+  for (let i = 0; i < 200; i++) { const r = CP.rollAttack(state, '1k2'); min = Math.min(min, r); max = Math.max(max, r); }
+  check('1k2 rolls 1..2', min === 1 && max === 2);
+  check('1k2 against defense 2 always deals 1', [1, 2].every((r) => Math.max(1, r - CP.UNIT_TYPES.infantry.defense) === 1));
+  // Put the worm in front of the fighters; they should notice and kill it by themselves.
+  const fs = state.units.filter((u) => u.type === 'infantry' || u.type === 'rifleman');
+  w.x = w.px = fs[0].x + 3; w.y = w.py = fs[0].y; w.home = { x: w.x, y: w.y };
+  run(state, 20);
+  check('fighters kill a small worm', !CP.unitById(state, w.id));
+}
+
+// 12. Mission 2 can be won: fighters escort settlers to each nest.
+{
+  const state = CP.createMission(2);
+  const fighters = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler');
+  const settlers = () => state.units.filter((u) => u.type === 'settler');
+  let guard = 0;
+  while (state.nests.length && guard++ < 900 * CP.SIM_HZ) {
+    const nest = state.nests[0];
+    if (guard % 20 === 1) {
+      const f = fighters().filter((u) => !u.order || u.order.type === 'move');
+      if (f.length) CP.orderMove(state, f, nest.x + 0.5, nest.y + 2);
+      const s = settlers()[0];
+      if (s && (!s.order || s.order.type !== 'fill')) CP.orderSmart(state, [s.id], nest.x + 0.5, nest.y + 0.5);
+    }
+    CP.tick(state);
+    state.events.length = 0;
+  }
+  run(state, 1);
+  check('mission 2 is won', state.mission.result === 'win', `at ${state.time.toFixed(0)} s, nests left ${state.nests.length}, our units ${state.units.filter((u) => u.owner === 'player').length}`);
+}
+
+// 13. A blow on a filling settler resets the nest.
+{
+  const state = CP.createMission(2);
+  const nest = state.nests[0];
+  const s = state.units.find((u) => u.type === 'settler');
+  s.x = s.px = nest.x - 0.5; s.y = s.py = nest.y + 0.5;
+  CP.orderSmart(state, [s.id], nest.x + 0.5, nest.y + 0.5);
+  run(state, 3);
+  const before = nest.progress;
+  const w = CP.addUnit(state, 'wormSmall', nest.x - 1.5, nest.y + 0.5);
+  w.home = { x: nest.x, y: nest.y };
+  run(state, 1.2);
+  check('filling progresses, a worm bite resets it', before > 2 && nest.progress < before, `${before.toFixed(1)} -> ${nest.progress.toFixed(1)}`);
+}
+
+// 14. Mabmia: tame her and she follows.
+{
+  const state = CP.createMission(1);
+  const m = state.units.find((u) => u.type === 'mabmia');
+  const s = state.units.find((u) => u.type === 'settler');
+  CP.orderMove(state, [s], m.x - 2, m.y);
+  run(state, 25);
+  CP.updateFog(state);
+  const what = CP.orderSmart(state, [s.id], m.x, m.y - 0.3);
+  run(state, 15);
+  check('settler tames Mabmia', m.followId === s.id, what);
+  CP.orderMove(state, [s], 8, 44);
+  run(state, 30);
+  check('Mabmia follows the settler', Math.hypot(m.x - s.x, m.y - s.y) < 3, Math.hypot(m.x - s.x, m.y - s.y).toFixed(1));
 }
 
 console.log(failed ? `\n${failed} failed` : '\nall passed');
