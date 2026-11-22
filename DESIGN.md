@@ -1,6 +1,6 @@
 # Czerwona Planeta — dokument projektowy RTS-a dla Artura
 
-Eksport z 22.11.2026. Źródło prawdy: dokument Claude Docs https://claude.ai/artifact/LUy8K3DYyDk9btBZjkvHMc — jeśli się różnią, wygrywa dokument.
+Źródło prawdy: ten plik. Zmiany wprowadza Claude Code po rozmowie z Gregiem. Pierwotny eksport z dokumentu Claude Docs z 22.11.2026 (https://claude.ai/artifact/LUy8K3DYyDk9btBZjkvHMc), który nie jest już aktualizowany.
 
 ## Wizja i ustalenia
 
@@ -160,7 +160,8 @@ Gra to jedna strona HTML5 z canvasem w JavaScripcie, bez serwera, rozwijana w Cl
 - **Mapa** z kafli, szukanie drogi algorytmem A*. Przy małych armiach wystarczy prosta zasada omijania się jednostek.
 - **Mgła wojny** w trzech stanach: nieodkryte (czarne), odkryte (przyciemnione), widoczne.
 - **Stwory** działają na prostych zachowaniach: stoją, patrolują, pilnują terenu, atakują w zasięgu, wracają. Nie ma przeciwnika, który buduje bazę.
-- **Kod Grodu:** czy brać go za bazę, rozstrzygniemy po przejrzeniu jego kodu.
+- **Kod Grodu (rozstrzygnięte 22.11.2026):** start od zera. Z Grodu przeniesione do JavaScriptu: `PixelCanvas` z pomocnikami `hash` i `mix` (rysowanie pixel artu), losowanie z ziarnem (mulberry32) i zasady architektury: symulacja oddzielona od rysowania, stały krok symulacji, liczby w jednym pliku danych, polskie napisy w jednym pliku. Bez PixiJS, Vite i TypeScriptu, bo gra ma się otwierać z pliku bez budowania.
+- **Pliki:** `index.html` i zwykłe skrypty `.js` dołączone po kolei, bez modułów ES (Chrome blokuje je przy otwieraniu z pliku).
 
 Kolejność prac:
 
@@ -237,5 +238,5 @@ Szkielet jest gotowy, gdy wszystkie punkty działają na grafice zastępczej:
 - [ ] Bohater: imię i wygląd. Propozycja: wymyśla Artur.
 - [ ] Kolejność bossów: Władca Kryształów (25 serc, 2k4) jest silniejszy od Imapii (20 serc, 1k4). Zamienić kolejność czy dać Imapii specjalne zdolności?
 - [ ] Mabmia: tylko towarzysz czy daje bonus, np. odkrywa mgłę wokół siebie?
-- [ ] Kod Grodu jako baza czy start od zera.
+- [x] Kod Grodu jako baza czy start od zera. Start od zera z przeniesionymi narzędziami, szczegóły w „Technika i plan prac”.
 - [ ] Karty dla naszych jednostek i bohatera w tym samym szablonie co stwory: robimy?

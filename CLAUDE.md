@@ -9,5 +9,7 @@ RTS w pikselowym stylu Warcrafta 2 dla sześcioletniego Artura: osadnicy na stea
 - Pixel art tworzysz sam w kodzie. Wzorem dla stworów są karty w `reference/karty/`: obejrzyj właściwą kartę, zanim narysujesz stwora.
 - Serca, atak i obrona stworów są z kart i się nie zmieniają. Pozostałe liczby bierz z sekcji „Parametry startowe” w `DESIGN.md`; jeśli zmieniasz którąś przy strojeniu, zapisz zmianę w `DESIGN.md`.
 - Pracujemy etapami z sekcji „Technika i plan prac”. Etap 1 jest skończony, gdy działa cała lista „Gotowość etapu 1”. Nie zaczynaj kolejnego etapu bez potwierdzenia.
-- Jeśli dostaniesz ścieżkę do kodu gry Gród, najpierw oceń, co da się z niego wziąć (render kafli, sprite'y, interfejs, zapis), i przedstaw propozycję, zanim cokolwiek skopiujesz.
+- Kod Grodu leży w `~/Desktop/Projects/slowianie/grod`. Decyzja, co z niego wzięliśmy, jest w `DESIGN.md` w sekcji „Technika i plan prac”.
+- Greg nie edytuje plików. Zmiany w `DESIGN.md` i `CLAUDE.md` wprowadzasz Ty na podstawie rozmowy.
+- Kod, nazwy i komentarze po angielsku, interfejs i dokumenty po polsku.
 - Punkty z sekcji „Otwarte decyzje” rozstrzyga Greg. Nie wybieraj za niego, tylko zapytaj, gdy któryś zablokuje pracę.
