@@ -225,12 +225,12 @@ Obie misje są rozpisane do budowy. Pozostałe rozpiszemy po teście z Arturem.
 
 Szkielet jest gotowy, gdy wszystkie punkty działają na grafice zastępczej:
 
-- [ ] Mapa przewija się strzałkami, krawędzią ekranu i klikiem w minimapę.
-- [ ] Lewy klik i ramka zaznaczają jednostki, a zaznaczone mają obwódkę.
-- [ ] Prawy klik wysyła jednostki. Omijają przeszkody i nie zakleszczają się w przejściu szerokim na 1 kafel.
-- [ ] Spacja pauzuje, a rozkazy wydane w pauzie wykonują się po wznowieniu.
-- [ ] Mgła wojny odkrywa się wokół jednostek w trzech stanach.
-- [ ] 12 jednostek w ruchu bez przycinania w Chrome i Safari na laptopie.
+- [x] Mapa przewija się strzałkami, krawędzią ekranu i klikiem w minimapę.
+- [x] Lewy klik i ramka zaznaczają jednostki, a zaznaczone mają obwódkę.
+- [x] Prawy klik wysyła jednostki. Omijają przeszkody i nie zakleszczają się w przejściu szerokim na 1 kafel.
+- [x] Spacja pauzuje, a rozkazy wydane w pauzie wykonują się po wznowieniu.
+- [x] Mgła wojny odkrywa się wokół jednostek w trzech stanach.
+- [ ] 12 jednostek w ruchu bez przycinania w Chrome i Safari na laptopie. Chrome: klatka liczy się w 0,5 ms. Safari czeka na sprawdzenie przez Grega.
 
 ## Otwarte decyzje
 
