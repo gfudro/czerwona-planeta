@@ -8,7 +8,9 @@ RTS w pikselowym stylu dla Artura: osadnicy na steampunkowym Marsie kontra stwor
 
 ## Uruchomienie
 
-Otwórz `index.html` w Chrome albo Safari. Bez serwera i instalacji.
+Gra w sieci: https://gfudro.github.io/czerwona-planeta/ (aktualizuje się sama po każdym pushu na `main`).
+
+Lokalnie: otwórz `index.html` w Chrome albo Safari. Bez serwera i instalacji.
 
 Skróty: lewy klik i ramka zaznaczają, podwójny klik zaznacza wszystkich tego typu na ekranie, prawy klik (albo Ctrl + klik) wysyła, spacja to pauza, strzałki i krawędź ekranu przewijają, Ctrl + cyfra zapamiętuje grupę, cyfra ją wybiera, dwa razy cyfra pokazuje grupę.
 
