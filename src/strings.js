@@ -22,6 +22,17 @@
     mission: 'Misja',
     theEnd: 'Zwycięstwo!',
     // Building upgrades: one word each.
+    // What each upgrade does, shown under its name: as short as possible.
+    upgradeText: {
+      picks: 'Niesie więcej',
+      boots: 'Szybsi osadnicy',
+      supplies: '+2 miejsca',
+      infirmary: 'Leczy przy kopule',
+      swords: 'Piechur bije mocniej',
+      shields: 'Mniej ran',
+      barrels: 'Mocniejsze strzały',
+      sights: 'Dalsze strzały',
+    },
     upgrades: {
       picks: 'Kilofy',
       boots: 'Buty',

@@ -274,7 +274,7 @@ Wersja 0.9.0, przebudowa po uwadze Grega z 23.11.2026: „zdecydowanie za łatwo
 
 **Ulepszenia w budynkach (od misji 3)**
 
-W każdym budynku dwa ulepszenia do wyboru. Wybór jednego zamyka drugie do końca misji. Ulepszenie kosztuje i trwa (badanie idzie obok szkolenia). Panel pokazuje dwa przyciski ze słowem „albo” między nimi, po wyborze zostaje tylko wybrane z procentem, potem z ptaszkiem.
+W każdym budynku dwa ulepszenia do wyboru. Wybór jednego zamyka drugie do końca misji. Ulepszenie kosztuje i trwa (badanie idzie obok szkolenia). Panel pokazuje dwa przyciski ze słowem „albo” między nimi, na każdym nazwa i pod nią krótki opis w jednej linii (np. „Miecze / Piechur bije mocniej”, od 0.9.1, opisy w `src/strings.js`, `upgradeText`), po wyborze zostaje tylko wybrane z procentem, potem z ptaszkiem.
 
 | Budynek | Wybór | Działanie | Koszt (kryształy/złom), czas |
 |---|---|---|---|

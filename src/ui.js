@@ -284,11 +284,12 @@
       }
     }
 
-    function cmdButton(pic, name, cost, state, enabled, onClick) {
+    function cmdButton(pic, name, cost, state, enabled, onClick, desc) {
       const btn = h('button', 'cmd' + (enabled ? '' : ' off'));
       btn.appendChild(pic);
       const txt = h('div', 'cmdText');
       txt.appendChild(h('div', 'cmdName', name));
+      if (desc) txt.appendChild(h('div', 'cmdDesc', desc));
       txt.appendChild(costEl(cost, state));
       btn.appendChild(txt);
       btn.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -355,6 +356,7 @@
           box.appendChild(iconEl(CP.icon('up_' + id), 'uicon'));
           const txt = h('div', 'cmdText');
           txt.appendChild(h('div', 'cmdName', STR.upgrades[id]));
+          txt.appendChild(h('div', 'cmdDesc', STR.upgradeText[id]));
           const research = state.buildings.find((o) => o.research && o.research.id === id);
           if (done) txt.appendChild(iconEl(CP.icon('check'), 'icon20'));
           else if (research) txt.appendChild(h('div', 'selNum', Math.floor((research.research.t / def.time) * 100) + '%'));
@@ -364,7 +366,7 @@
         }
         const blocker = CP.upgradeBlocker(state, b, id);
         if (row.childNodes.length) row.appendChild(h('div', 'upOr', STR.or));
-        row.appendChild(cmdButton(iconEl(CP.icon('up_' + id), 'uicon'), STR.upgrades[id], def.cost, state, !blocker, () => CP.startUpgrade(state, b, id)));
+        row.appendChild(cmdButton(iconEl(CP.icon('up_' + id), 'uicon'), STR.upgrades[id], def.cost, state, !blocker, () => CP.startUpgrade(state, b, id), STR.upgradeText[id]));
       }
       cmd.appendChild(row);
     }
