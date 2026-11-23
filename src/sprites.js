@@ -108,36 +108,6 @@
     return s;
   };
 
-  /** The lander: a brass capsule on copper legs. 3×3 tiles plus room to rise above them. */
-  CP.paintLander = function () {
-    const T = CP.ART_TILE;
-    const c = new (PC())(T * 3, T * 3 + 24);
-    c.origin(0, 24);
-    const cx = 48;
-    // Legs and pads.
-    for (const [x0, x1] of [[30, 12], [66, 84]]) {
-      c.line(x0, 64, x1, 86, PAL.copperDark).line(x0, 63, x1, 85, PAL.copper);
-      c.ellipse(x1, 87, 6, 2.5, PAL.steel);
-    }
-    // Landing ring.
-    c.ellipse(cx, 70, 34, 12, PAL.copperDark).ellipse(cx, 68, 32, 10, PAL.copper);
-    // Capsule body.
-    c.poly([cx - 22, 66, cx - 16, 10, cx + 16, 10, cx + 22, 66], PAL.brass);
-    c.poly([cx - 22, 66, cx - 16, 10, cx - 10, 10, cx - 14, 66], PAL.brassLight);
-    c.poly([cx + 14, 66, cx + 10, 10, cx + 16, 10, cx + 22, 66], PAL.brassDark);
-    // Nose cone.
-    c.ellipse(cx, 10, 16, 9, PAL.copper).ellipse(cx - 4, 7, 6, 3, 0xd07a48).rect(cx - 1, -18, 3, 12, PAL.steel).px(cx, -20, 0xff6a3a);
-    // Orange band and porthole.
-    c.rect(cx - 20, 40, 40, 6, PAL.team).hline(cx - 20, cx + 19, 40, PAL.teamLight);
-    c.ellipse(cx, 26, 8, 8, PAL.brassDark).ellipse(cx, 26, 6, 6, PAL.glassDark).ellipse(cx - 2, 24, 2.5, 2.5, PAL.glass);
-    // Hatch with rivets.
-    c.rect(cx - 7, 50, 14, 16, PAL.brassDark).rect(cx - 6, 51, 12, 14, PAL.steel).hline(cx - 6, cx + 5, 58, PAL.brassDark);
-    for (let y = 14; y < 64; y += 6) c.px(cx - 18 + (y - 14) * 0.1, y, PAL.brassDark).px(cx + 17 - (y - 14) * 0.1, y, PAL.brassDark);
-    c.outline(PAL.outline);
-    c.shadow(cx + 4, 80, 40, 10, 70);
-    return c;
-  };
-
   /**
    * The whole map painted once into one big bitmap: rust sand with grain,
    * darker dunes, boulders of red rock and dark cracks in the ground.

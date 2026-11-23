@@ -141,6 +141,7 @@ Pixel art rysuje Claude Code w kodzie, jak w Grodzie. Każdy sprite to paleta i 
 - **Widok:** z góry pod lekkim kątem, jak w Warcrafcie 2. Kafel 32 px, szczegóły w Parametrach startowych.
 - **Animacje skromne:** chód na 2–4 klatki, atak jako wypad z błyskiem, śmierć jako obłoczek pyłu. Lewo i prawo przez odbicie lustrzane.
 - **Paleta z kart:** rdza i ochra pustyni, mosiądz i miedź maszyn, turkus szkła kopuł, fiolet kryształów, granatowe niebo z dwoma księżycami.
+- **Styl budynków i obiektów (od 0.5.0, po uwagach Grega):** cieniowanie światłem z lewej góry, 5–7 odcieni na materiał z ditheringiem, obrys w ciemniejszym odcieniu sąsiedniego koloru zamiast czarnej kreski, tekstury (cegły, nity, rdza, odbicia na szkle). Para, dym i blask rysowane bez obrysu. Narzędzia w `src/shading.js`.
 - **Kolor drużyny:** nasi mają jeden wyraźny kolor na stroju, np. pomarańczowy, żeby od razu odróżniać ich od stworów. Nie turkus, bo to kolor MAibawu.
 
 Stwory mają być rozpoznawalne z kart. Karty leżą w repozytorium w folderze `reference/karty` i są wzorem do sprite'ów:
@@ -224,7 +225,7 @@ Obie misje są rozpisane do budowy. Pozostałe rozpiszemy po teście z Arturem.
 
 ## Stan prac i ustalenia z budowy
 
-Etapy 1–4 są zrobione (wersja 0.4.0). Misje 1 i 2 czekają na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
+Etapy 1–4 są zrobione (wersja 0.5.0). Misje 1 i 2 czekają na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
 
 - **Budynki są niezniszczalne.** Robaki atakują tylko jednostki. Dzięki temu lądownik zawsze zostaje, a Artur nie traci bazy.
 - **Przegrana:** nie zostaje żadna jednostka i nie da się zrobić osadnika (brak lądownika albo mniej niż 50 kryształów). Sam lądownik bez kryształów to przegrana, bo inaczej gra by stanęła.

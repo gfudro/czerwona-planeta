@@ -93,20 +93,10 @@
     ctx.globalAlpha = 1;
   }
 
-  /** Wooden scaffolding over a building site. */
+  /** Wooden scaffolding over a building site (pixel-art sprite). */
   function drawScaffold(ctx, b, cam) {
-    const x = b.x * TP - cam.x, y = b.y * TP - cam.y, s = b.size * TP;
-    ctx.strokeStyle = '#8a5a2a';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    for (let k = 0; k <= b.size; k++) {
-      ctx.moveTo(x + 6 + k * (s - 12) / b.size, y + s - 4);
-      ctx.lineTo(x + 6 + k * (s - 12) / b.size, y + 10);
-    }
-    ctx.moveTo(x + 6, y + s * 0.4); ctx.lineTo(x + s - 6, y + s * 0.4);
-    ctx.moveTo(x + 6, y + s * 0.75); ctx.lineTo(x + s - 6, y + s * 0.75);
-    ctx.moveTo(x + 6, y + s * 0.75); ctx.lineTo(x + s * 0.5, y + s * 0.4);
-    ctx.stroke();
+    const spr = CP.objectSprite('scaffold' + b.size);
+    ctx.drawImage(spr, b.x * TP - cam.x, b.y * TP - cam.y, spr.width * S, spr.height * S);
   }
 
   function unitFrame(u) {
