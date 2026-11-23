@@ -143,6 +143,7 @@
         const b = CP.buildingById(state, view.selectedBuilding);
         if (b && CP.BUILDING_TYPES[b.type].trains) {
           b.rally = { x: t.x, y: t.y };
+          CP.sound.play('order');
           CP.addMarker(game.renderer, t.x, t.y, game.now());
         }
         return;
@@ -150,6 +151,7 @@
       if (!view.selected.size) return;
       const what = CP.orderSmart(state, [...view.selected], t.x, t.y, unitAt(state, view, sx, sy, game.alpha()));
       if (what) CP.addMarker(game.renderer, t.x, t.y, game.now(), what === 'attack' ? '255,64,48' : undefined);
+      if (what) CP.sound.play(what === 'attack' ? 'attackOrder' : 'order');
     }
 
     function place() {
@@ -160,7 +162,7 @@
       if (!builders.length) { view.placing = null; return; }
       const tile = placingTile(view, g.type);
       const b = CP.placeBuilding(game.state, g.type, tile.x, tile.y, builders);
-      if (b) view.placing = null;
+      if (b) { view.placing = null; CP.sound.play('order'); }
     }
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -226,6 +228,9 @@
           else view.selectedThing = thingAtScreen(state, view, p.x, p.y);
         }
       }
+      // A little "yes?" when our units get selected.
+      if (view.selected.size && [...view.selected].some((id) => { const s = CP.unitById(state, id); return s && s.owner === 'player'; })) CP.sound.play('select');
+      else if (view.selectedBuilding != null) CP.sound.play('click');
       view.box = null;
       drag = null;
     });

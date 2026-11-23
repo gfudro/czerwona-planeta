@@ -161,6 +161,16 @@ Stwory mają być rozpoznawalne z kart. Karty leżą w repozytorium w folderze `
 | Władca Kryształów | Fioletowy kryształowy olbrzym z koroną i mechanicznym sercem | `wladca-krysztalow.jpg` |
 | Imapia Wielka | Karmazynowy pancerz, turkusowy hełm z czerwonym okiem, poszarpane skrzydła | `imapia-wielka.jpg` |
 
+## Dźwięk
+
+Od 0.8.0, na prośbę Grega z 23.11.2026. Wszystko syntetyzowane w kodzie (Web Audio), bez plików, tak jak grafika. Kod w `src/audio.js`.
+
+- **Efekty:** kliknięcie przycisku, wybór naszych jednostek, rozkaz ruchu i ataku, cios, strzał karabinu, działo (para, huk i uderzenie kuli), śmierć stwora i naszej jednostki, kryształy i złom przy lądowniku, budynek gotowy, nowa jednostka, robak wychodzi z gniazda, stwór zauważony (gwizd parowy), awans i upadek bohatera, pilnowane złoże, oswojenie Mabmii, zasypane gniazdo, cel zaliczony, wygrana i przegrana.
+- **Gdzie słychać:** pełna głośność na ekranie, ciszej tuż za nim, z daleka nic. Lewo-prawo zgodnie z miejscem na ekranie. Ten sam dźwięk nie powtarza się częściej niż co kilkadziesiąt milisekund, żeby bitwa nie była hałasem.
+- **Muzyka:** spokojna pętla (bas, pozytywka, cichy podkład, tykanie zegara). Na powierzchni a-moll, w jaskiniach niżej i ciemniej. Dużo ciszej niż efekty (zmierzone szczyty: efekty 0,06–0,36, muzyka 0,03).
+- **Przełączniki** „Dźwięk” i „Muzyka” są w menu (na górnym pasku zabrakło miejsca na laptopie). Ustawienie zostaje w localStorage.
+- Dźwięk startuje dopiero po pierwszym kliknięciu albo klawiszu, bo tak działają przeglądarki.
+
 ## Technika i plan prac
 
 Gra to jedna strona HTML5 z canvasem w JavaScripcie, bez serwera, rozwijana w Claude Code jak Gród. Postęp kampanii zapisuje się w przeglądarce.

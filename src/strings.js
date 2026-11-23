@@ -12,6 +12,8 @@
     fast: 'Szybko',
     autoPause: 'Autopauza',
     fullscreen: 'Ekran',
+    sound: 'Dźwięk',
+    music: 'Muzyka',
     win: 'Brawo!',
     next: 'Dalej',
     lose: 'Koniec',

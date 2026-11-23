@@ -99,6 +99,8 @@
     }
     el('fullscreenBtn').textContent = STR.fullscreen;
     el('fullscreenBtn').addEventListener('click', toggleFullscreen);
+    // Every button in the interface clicks softly.
+    document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('button')) CP.sound.play('click'); }, true);
     el('autoPauseBtn').textContent = STR.autoPause;
     el('autoPauseBtn').addEventListener('click', () => game.toggleAutoPause());
     el('version').textContent = 'v' + CP.VERSION;
@@ -423,6 +425,14 @@
         list.appendChild(b);
       }
       box.appendChild(list);
+      // Sound and music switches live here, not in the top bar (no room on a laptop).
+      const sound = h('div', 'soundRow');
+      for (const [label, isOn, set] of [[STR.sound, CP.sound.sfxOn, CP.sound.setSfx], [STR.music, CP.sound.musicOn, CP.sound.setMusic]]) {
+        const b = h('button', isOn() ? 'on' : '', label);
+        b.addEventListener('click', () => { set(!isOn()); b.classList.toggle('on', isOn()); });
+        sound.appendChild(b);
+      }
+      box.appendChild(sound);
       ov.appendChild(box);
     }
 

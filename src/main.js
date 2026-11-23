@@ -58,6 +58,7 @@
       const lander = state.buildings.find((b) => b.type === 'lander');
       if (lander) CP.centerOn(view, state.map, lander.x + 5, lander.y - 1);
       ui.reset();
+      CP.sound.setTheme(state.map.theme === 'cave' ? 'cave' : 'desert');
     }
 
     function startMission(id) {
@@ -96,6 +97,7 @@
     function handleEvents(now) {
       const state = game.state;
       CP.takeEvents(game.renderer, state, now);
+      CP.sound.onEvents(state, view);
       for (const e of state.events) {
         if (e.type === 'spotted') {
           ui.ping(e.x, e.y, now);
