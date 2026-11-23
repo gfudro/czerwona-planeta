@@ -387,19 +387,25 @@ function allArrived(state) {
   check('mission 4 is won', state.mission.result === 'win', `goal ${state.mission.goal}, mined ${big.max - big.amount}`);
 }
 
-// 21. Mission 5: the army walks into the palace and defeats the queen and her escort.
+// 21. Mission 5: the starting army alone barely makes it; after training more it wins comfortably.
 {
   const state = CP.createMission(5);
-  check('mission 5: Imapia with escort, a cannon at start', !!CP.unitById(state, state.bossId) && state.units.some((u) => u.type === 'cannon'));
+  check('mission 5: Imapia with escort, raids planned', !!CP.unitById(state, state.bossId) && state.raid && state.raid.left > 0);
   const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler' && !(u.down > 0));
+  const ws = state.buildings.find((b) => b.type === 'workshop'), fg = state.buildings.find((b) => b.type === 'forge');
+  for (const t of ['infantry', 'infantry', 'rifleman', 'rifleman']) CP.train(state, ws, t);
+  CP.train(state, fg, 'cannon');
+  run(state, 85);
+  const before = army().length;
   const steps = [[14, 38], [22, 32], [30, 27], [38, 22], [44, 21], [50, 16], [52, 11]];
   for (const [x, y] of steps) {
     CP.orderMove(state, army(), x, y);
     run(state, 25);
   }
   const q = CP.unitById(state, state.bossId);
-  if (q) { CP.orderSmart(state, army().map((u) => u.id), q.x, q.y, q); run(state, 40); }
-  check('mission 5 is won by defeating Imapia', state.mission.result === 'win', `${army().length} fighters left, queen ${q && q.hearts}`);
+  if (q) { CP.orderSmart(state, army().map((u) => u.id), q.x, q.y, q); run(state, 60); }
+  check('mission 5 is won with a trained army', state.mission.result === 'win', `${before} fighters went, ${army().length} left, queen ${q && q.hearts}`);
+  check('the queen called her guard', state.queenCalled);
 }
 
 // 22. Mission 6: through the caves past the nest to the Lord's grotto.

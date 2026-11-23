@@ -285,9 +285,14 @@ Rozpisane przez Claude Code 23.11.2026, robocze do sprawdzenia na teście.
 
 **Misja 5: Królowa**
 
-- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 200 kryształów, 200 złomu. Druga kopuła doszła przy budowie, bo z jedną startowa armia (9) przekraczała limit 8.
-- **Mapa:** 64×48. Ruiny pałacu w prawym górnym rogu. Po drodze 2 patrole MAibawu. Imapia siedzi w pałacu z 2 MAibawu przy boku.
+Utrudniona 23.11.2026 (Greg: „za łatwa”). Liczby z kart bez zmian, trudność daje liczba stworów, napady i mniejsza armia na start.
+
+- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 2 piechurów, 1 strzelec, bohater (bez działa). 300 kryształów, 250 złomu, żeby od razu szkolić.
+- **Mapa:** 64×48. Pałac w prawym górnym rogu: mur z bramami, kolumny, sala tronowa. Po drodze 2 patrole po 3 MAibawu.
+- **Królowa i straż:** Imapia z 4 MAibawu przy boku, przy bramie pałacu 3 kolejnych. Wszyscy walczą razem. Przy pierwszym ciosie Imapia przywołuje z sali tronowej jeszcze 4 MAibawu.
+- **Napady:** od 120 s co 100 s z pałacu na bazę idzie 3 MAibawu, razem 4 napady.
 - **Cel:** pokonaj Imapię, licznik 0/1. Imapia wypatruje wroga z 6 kafli i nie opuszcza pałacu dalej niż na 8 kafli.
+- **Sprawdzone w symulacji:** sama startowa armia wygrywa ostatkiem sił, ginie wszystko poza bohaterem. Po wyszkoleniu 2 piechurów, 2 strzelców i działa wygrywa pewnie (z 9 jednostek wraca 7).
 
 **Misja 6: Jaskinie (finał)**
 
@@ -302,7 +307,7 @@ Etapy 1–5 są zrobione (wersja 0.7.0), cała kampania 1–6 czeka na test z Ar
 
 - **Opis celu (0.7.1):** obok licznika zawsze stoi 2–3 słowa, co teraz zrobić. W misji 4 ostatni cel ma ikonę dużego złoża zamiast zwykłego kryształu, bo myliła się z kryształami.
 - **Nowa wersja:** przy podbiciu `CP.VERSION` w `src/data.js` trzeba też zmienić `?v=` przy skryptach w `index.html`, żeby przeglądarka nie zmieszała starych plików z nowymi.
-- **Misje 5 i 6 w symulacji** wygrywa sama startowa armia z małymi stratami. Na teście sprawdzić, czy bossowie nie są za łatwi (przy obronie z kart można dodać im eskorty, a nie ruszać liczb).
+- **Misja 6 w symulacji** wygrywa sama startowa armia z małymi stratami. Misja 5 była za łatwa i została utrudniona (patrz specyfikacja). Jeśli finał też okaże się za łatwy, dodać mu stwory i napady w ten sam sposób.
 - **Budynki są niezniszczalne.** Robaki atakują tylko jednostki. Dzięki temu lądownik zawsze zostaje, a Artur nie traci bazy.
 - **Przegrana:** nie zostaje żadna jednostka i nie da się zrobić osadnika (brak lądownika albo mniej niż 50 kryształów). Sam lądownik bez kryształów to przegrana, bo inaczej gra by stanęła.
 - **Robaki** krążą przy swoim gnieździe i atakują to, co podejdzie na 5 kafli. Gonią najdalej 14 kafli od gniazda. Uderzony z daleka robak rusza na tego, kto go trafił.

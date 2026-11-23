@@ -3,7 +3,7 @@
 (function (CP) {
   'use strict';
 
-  CP.VERSION = '0.8.0';
+  CP.VERSION = '0.8.1';
 
   // Art pixels per tile, and how many screen pixels each art pixel takes.
   CP.ART_TILE = 32;

@@ -168,7 +168,7 @@
 
   /** Patrols of MAibawu: `count` warriors walking the same route in a little clump. */
   function addPatrol(state, route, count, group) {
-    const offs = [{ x: 0, y: 0 }, { x: 1, y: 0.6 }, { x: -0.6, y: 1 }];
+    const offs = [{ x: 0, y: 0 }, { x: 1, y: 0.6 }, { x: -0.6, y: 1 }, { x: 0.8, y: -0.8 }, { x: -1, y: -0.4 }];
     for (let i = 0; i < count; i++) {
       const p = CP.nearestWalkable(state.map, Math.floor(route[0].x + offs[i].x), Math.floor(route[0].y + offs[i].y));
       const m = CP.addUnit(state, 'maibawu', p.x + 0.5, p.y + 0.5);
@@ -440,6 +440,9 @@
       ],
     },
   };
+  // Raids on our base in mission 5 (seconds, warriors per raid, how many raids).
+  const RAID = { first: 120, interval: 100, size: 3, count: 4 };
+
   MISSIONS[5] = {
     id: 5,
     name: 'Królowa',
@@ -453,6 +456,7 @@
       const routes = [
         [{ x: 20.5, y: 30.5 }, { x: 30.5, y: 28.5 }, { x: 26.5, y: 22.5 }],
         [{ x: 40.5, y: 26.5 }, { x: 46.5, y: 18.5 }, { x: 38.5, y: 16.5 }],
+        [{ x: 40.5, y: 10.5 }, { x: 41.5, y: 20.5 }],
       ];
       const keep = [
         { x: BASE.x + 3, y: BASE.y - 1, r: 7 },
@@ -483,17 +487,36 @@
       CP.addNode(state, 'wreck', wreck.x, wreck.y, CP.ECON.wreck);
       CP.addNode(state, 'wreck', wreck2.x, wreck2.y, CP.ECON.wreck);
       startBuildings(state, ['forge', 'dome']);
-      routes.forEach((r, i) => addPatrol(state, r, i + 1, i));
-      // The queen with two MAibawu at her side; they fight together.
+      // Two patrols on the way; the guard at the palace gate fights together with the queen.
+      [3, 3, 3].forEach((n, i) => addPatrol(state, routes[i], n, i === 2 ? 'queen' : i));
+      // The queen with four MAibawu at her side; they fight together.
       const q = addCreature(state, 'imapia', throne.x, throne.y);
       q.group = 'queen';
-      addPatrol(state, [{ x: throne.x - 1.5, y: throne.y + 2.5 }], 2, 'queen');
+      addPatrol(state, [{ x: throne.x - 1.5, y: throne.y + 2.5 }], 4, 'queen');
       state.bossId = q.id;
-      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman', 'rifleman', 'cannon']);
-      state.res = { crystals: 200, scrap: 200 };
+      // Raids: the queen sends MAibawu down to our base now and then.
+      state.throne = throne;
+      state.raid = { route: [{ x: 42.5, y: 12.5 }, { x: 30.5, y: 28.5 }, { x: BASE.x + 7, y: BASE.y - 3 }], next: RAID.first, left: RAID.count };
+      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman']);
+      state.res = { crystals: 300, scrap: 250 };
       return state;
     },
     goals: [{ icon: 'imapia', target: 1, count: (s) => (CP.unitById(s, s.bossId) ? 0 : 1) }],
+    update(state) {
+      // The first blow on the queen: she calls four more MAibawu from the throne hall.
+      const q = CP.unitById(state, state.bossId);
+      if (q && !state.queenCalled && q.hearts < CP.UNIT_TYPES.imapia.hearts) {
+        state.queenCalled = true;
+        addPatrol(state, [{ x: state.throne.x + 2.5, y: state.throne.y - 1.5 }], 4, 'queen');
+        for (const u of state.units) if (u.group === 'queen' && !u.order && q.order) u.order = { type: 'attack', targetId: q.order.targetId };
+        state.events.push({ type: 'spawn', x: q.x, y: q.y });
+      }
+      const r = state.raid;
+      if (!r || !r.left || state.time < r.next) return;
+      r.left--;
+      r.next = state.time + RAID.interval;
+      addPatrol(state, r.route, RAID.size, 'raid' + r.left);
+    },
   };
 
   MISSIONS[6] = {
@@ -577,6 +600,7 @@
     const m = state.mission;
     if (m.result) return;
     const def = MISSIONS[m.id];
+    if (def.update) def.update(state);
     // Goals advance in order; several can complete in the same moment.
     while (m.goal < def.goals.length && def.goals[m.goal].count(state) >= def.goals[m.goal].target) {
       m.goal++;
