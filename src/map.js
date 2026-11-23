@@ -3,7 +3,8 @@
   'use strict';
 
   // Terrain kinds. Only sand kinds can be walked on.
-  const T = { SAND: 0, DUNE: 1, ROCK: 2, CRACK: 3 };
+  // Everything from ROCK up is solid: RUIN is an old stone wall, LAVA a pool in the caves.
+  const T = { SAND: 0, DUNE: 1, ROCK: 2, CRACK: 3, RUIN: 4, LAVA: 5 };
   CP.T = T;
 
   function createMap(w, h) {

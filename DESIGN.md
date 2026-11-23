@@ -38,12 +38,12 @@ Liczby z kart przechodzą do gry bez zmian, żeby Artur rozpoznawał stwory z ka
 | Robak Pustynny duży | 15 | 1k2 | 2 | Wolniejszy i wytrzymały. Pojawia się przy gniazdach w późniejszych misjach. |
 | MAibawu, Wojownik z Czerwonej Planety | 9 | 2 | 2 | Patroluje ruiny po 1–3. Atakuje pierwszy, goni do granicy swojego terenu i wraca. |
 | Strażnik krystalicznego biomu | 12 | 1k2−1 | 4 | Stoi na złożu kryształów, bardzo powolny. Atakuje dopiero, gdy ktoś podejdzie blisko. Zwykłe jednostki zadają mu po 1. |
-| Władca Kryształów | 25 | 2k4 | 3 | Boss jaskiń kryształowych. |
-| Imapia Wielka, Królowa z Czerwonej Planety | 20 | 1k4 | 2 | Boss finałowy. |
+| Imapia Wielka, Królowa z Czerwonej Planety | 20 | 1k4 | 2 | Boss misji 5. Siedzi w ruinach pałacu z eskortą MAibawu. |
+| Władca Kryształów | 25 | 2k4 | 3 | Boss finałowy w jaskiniach kryształowych (misja 6). |
 
 Dwie rzeczy do poprawy na kartach:
 
-- Władca Kryształów ma więcej serc i mocniejszy atak niż Imapia, a to Imapia ma być bossem finałowym (decyzja w Otwartych decyzjach).
+- Władca Kryształów ma więcej serc i mocniejszy atak niż Imapia. Rozstrzygnięte 23.11.2026: zamieniamy kolejność, Imapia jest w misji 5, a finałem jest Władca w jaskiniach (misja 6).
 - Na karcie Władcy podtytuł i opis są skopiowane ze Strażnika („Krystaliczny Czołg z Głębi”, „relikt pustyni”).
 
 ## Nasza strona
@@ -106,8 +106,8 @@ Sześć krótkich misji, każda na 10–20 minut, z jednym celem pokazanym ikon�
 2. **Robaki w kopułach.** Robaki wyłażą ze szczelin. Znajdź i zasyp 3 gniazda. Pierwsza walka, wchodzą piechur i strzelec.
 3. **Wraki.** Dotrzyj do wraku wcześniejszej wyprawy przez ruiny patrolowane przez MAibawu. Eksploracja we mgle.
 4. **Krystaliczne złoże.** Przejmij duże złoże pilnowane przez Strażnika. Wchodzi działo parowe.
-5. **Jaskinie.** Zejście pod ziemię i walka z Władcą Kryształów.
-6. **Królowa.** Finał z Imapią Wielką.
+5. **Królowa.** Ruiny pałacu i walka z Imapią Wielką.
+6. **Jaskinie.** Finał: zejście pod ziemię i walka z Władcą Kryształów.
 
 Przegrana zdarza się, gdy nie zostanie żadna jednostka ani lądownik. Wtedy misja zaczyna się od nowa, bez kar. Postęp zapisuje się po każdej wygranej misji.
 
@@ -143,6 +143,8 @@ Pixel art rysuje Claude Code w kodzie, jak w Grodzie. Każdy sprite to paleta i 
 - **Paleta z kart:** rdza i ochra pustyni, mosiądz i miedź maszyn, turkus szkła kopuł, fiolet kryształów, granatowe niebo z dwoma księżycami.
 - **Styl budynków i obiektów (od 0.5.0, po uwagach Grega):** cieniowanie światłem z lewej góry, 5–7 odcieni na materiał z ditheringiem, obrys w ciemniejszym odcieniu sąsiedniego koloru zamiast czarnej kreski, tekstury (cegły, nity, rdza, odbicia na szkle). Para, dym i blask rysowane bez obrysu. Narzędzia w `src/shading.js`.
 - **Teren bez kratki (od 0.5.2):** logika mapy zostaje na kaflach, ale obraz nie. Skały, wydmy i szczeliny mają zaokrąglone, poszarpane szumem brzegi. Skały to płaskowyże z głazami i ścianą urwiska od dołu, rzucające cień na piasek. Szczeliny to ciągłe, poszarpane rozpadliny przez środki kafli. Kod w `src/terrain.js`.
+- **Jednostki (od 0.6.0):** w stylu cieniowanym, każda z innym kształtem: osadnik ma szklany hełm-bańkę, butlę i kilof, piechur szeroką mosiężną zbroję z kominem i pięścią, strzelec długi płaszcz, kapelusz i długi karabin, bohater pomarańczową pelerynę, hełm z czerwonym pióropuszem i miecz, działo dwa duże koła i kocioł. Kod w `src/units.js`.
+- **Ruiny (od 0.6.0):** mury to poszarpane pasy kamienia między środkami kafli, o zmiennej wysokości (całe odcinki, wyszczerbione, zwalone kikuty), z gruzem dookoła. Logika nadal blokuje cały kafel.
 - **Kolor drużyny:** nasi mają jeden wyraźny kolor na stroju, np. pomarańczowy, żeby od razu odróżniać ich od stworów. Nie turkus, bo to kolor MAibawu.
 
 Stwory mają być rozpoznawalne z kart. Karty leżą w repozytorium w folderze `reference/karty` i są wzorem do sprite'ów:
@@ -171,8 +173,12 @@ Kolejność prac:
 1. ✅ Szkielet: mapa, kamera, zaznaczanie, ruch, aktywna pauza, mgła wojny. Grafika zastępcza.
 2. ✅ Ekonomia: osadnik, kryształy, złom, lądownik, kopuła.
 3. ✅ Walka: piechur, strzelec, robaki i ich gniazda.
-4. ✅ Misje 1 i 2 z docelową grafiką, potem test na Arturze. ← tu jesteśmy: czeka test
-5. Poprawki po teście. Potem bohater, MAibawu, Strażnik, działo i misje 3–6.
+4. ✅ Misje 1 i 2 z docelową grafiką. Test na Arturze przesunięty po etapie 5.
+5. Bohater, MAibawu, Strażnik, działo i misje 3–6. Greg 23.11.2026: robimy przed testem z Arturem. ← tu jesteśmy
+   1. ✅ Bohater, działo z kuźnią, MAibawu i Strażnik, nowa grafika naszych jednostek w stylu cieniowanym (0.6.0).
+   2. ✅ Misje 3 i 4 (0.6.0). Czeka na sprawdzenie w przeglądarce.
+   3. Misje 5 i 6 z Imapią i Władcą, koniec kampanii.
+6. Poprawki po teście z Arturem.
 
 ## Parametry startowe
 
@@ -224,6 +230,59 @@ Obie misje są rozpisane do budowy. Pozostałe rozpiszemy po teście z Arturem.
 - **Zasypywanie:** osadnik stoi przy gnieździe 5 s, widać pasek postępu. Cios w osadnika przerywa zasypywanie.
 - **Cel:** zasyp 3 gniazda, licznik 0/3.
 
+## Etap 5: specyfikacja
+
+Rozpisane przez Claude Code 23.11.2026, robocze do sprawdzenia na teście.
+
+**Bohater**
+
+- Dołącza od misji 3 (przylatuje drugim lądownikiem). Misje 1 i 2 zostają bez zmian.
+- Punkty doświadczenia za stwora, którego bohater dobije: robak mały 1, robak duży 2, MAibawu 2, Strażnik 3, boss 5.
+- Poziomy: 2. poziom przy 3 punktach, 3. przy 7, 4. przy 12, 5. przy 18. Każdy poziom: +2 serca i +1 do ataku. Nad bohaterem widać gwiazdki poziomu.
+- Poziom i punkty zapisują się w przeglądarce razem z postępem kampanii, także gdy misja jest przegrana.
+- Gdy straci serca, pada (stwory go zostawiają), a po 20 s wstaje przy lądowniku z pełnymi sercami.
+
+**Działo parowe i kuźnia**
+
+- Działo przebija pancerz: zadaje pełny atak, obrona celu się nie liczy. Strzela kulą, która leci łukiem.
+- Kuźnię osadnik może budować od misji 4.
+
+**MAibawu**
+
+- Patroluje trasę w ruinach w grupkach po 1–3. Wypatruje wroga z 6 kafli i atakuje pierwszy.
+- Goni najdalej 10 kafli od swojej trasy, potem wraca na trasę.
+
+**Strażnik**
+
+- Stoi przy złożu, wypatruje wroga z 2 kafli i goni najdalej 3 kafle od swojego miejsca.
+- Dopóki Strażnik stoi, osadnicy nie kopią z jego złoża (gra pokazuje, że złoże jest pilnowane).
+
+**Misja 3: Wraki**
+
+- **Start:** lądownik, kopuła, warsztat. 3 osadników, 2 piechurów, 2 strzelców, bohater. 150 kryształów, 100 złomu.
+- **Mapa:** 64×48 kafli. Ruiny dawnej osady stworów: kamienne mury z przejściami. Za ruinami, w prawym górnym rogu, wrak rakiety wcześniejszej wyprawy.
+- **Wrogowie:** 3 patrole MAibawu (1, 2 i 3 wojowników). Bez gniazd robaków.
+- **Cel:** dotrzyj do rakiety, licznik 0/1. Wystarczy, że dojdzie jedna nasza jednostka.
+
+**Misja 4: Krystaliczne złoże**
+
+- **Start:** lądownik, kopuła, warsztat. 3 osadników, 2 piechurów, 1 strzelec, bohater. 200 kryształów, 200 złomu.
+- **Mapa:** 48×48. Małe złoże i wrak przy bazie, duże złoże (1500) z Strażnikiem 20 kafli od bazy. Jedno gniazdo robaków po drodze (wypuszcza robaki co 45 s, nie trzeba go zasypywać).
+- **Cele po kolei:** postaw kuźnię, pokonaj Strażnika, zbierz 200 kryształów z dużego złoża.
+
+**Misja 5: Królowa**
+
+- **Start:** lądownik, kopuła, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 200 kryształów, 200 złomu.
+- **Mapa:** 64×48. Ruiny pałacu w prawym górnym rogu. Po drodze 2 patrole MAibawu. Imapia siedzi w pałacu z 2 MAibawu przy boku.
+- **Cel:** pokonaj Imapię, licznik 0/1. Imapia wypatruje wroga z 6 kafli i nie opuszcza pałacu dalej niż na 8 kafli.
+
+**Misja 6: Jaskinie (finał)**
+
+- **Start:** lądownik, kopuła, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 250 kryształów, 250 złomu.
+- **Mapa:** 64×48, pod ziemią: ciemna skała, kryształowe ściany i jeziorka lawy (nieprzechodnie). Dwa Strażniki przy złożach i gniazdo robaków w połowie drogi.
+- **Władca Kryształów** w najgłębszej grocie. Wypatruje wroga z 5 kafli i nie opuszcza groty dalej niż na 6 kafli.
+- **Cel:** pokonaj Władcę, licznik 0/1. Po wygranej ekran końca kampanii.
+
 ## Stan prac i ustalenia z budowy
 
 Etapy 1–4 są zrobione (wersja 0.5.0). Misje 1 i 2 czekają na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
@@ -254,8 +313,8 @@ Szkielet jest gotowy, gdy wszystkie punkty działają na grafice zastępczej:
 ## Otwarte decyzje
 
 - [ ] Nazwa gry. Robocza: Czerwona Planeta.
-- [ ] Bohater: imię i wygląd. Propozycja: wymyśla Artur.
-- [ ] Kolejność bossów: Władca Kryształów (25 serc, 2k4) jest silniejszy od Imapii (20 serc, 1k4). Zamienić kolejność czy dać Imapii specjalne zdolności?
+- [ ] Bohater: imię i wygląd wymyśla Artur. Do tego czasu tymczasowy „Bohater”: kapitan w mosiężnym hełmie z pióropuszem i pomarańczowej pelerynie.
+- [x] Kolejność bossów: zamieniona. Misja 5 to Imapia, misja 6 (finał) to Władca Kryształów.
 - [ ] Mabmia: tylko towarzysz czy daje bonus, np. odkrywa mgłę wokół siebie?
 - [x] Kod Grodu jako baza czy start od zera. Start od zera z przeniesionymi narzędziami, szczegóły w „Technika i plan prac”.
 - [ ] Karty dla naszych jednostek i bohatera w tym samym szablonie co stwory: robimy?

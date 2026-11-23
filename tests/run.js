@@ -255,5 +255,137 @@ function allArrived(state) {
   check('Mabmia follows the settler', Math.hypot(m.x - s.x, m.y - s.y) < 3, Math.hypot(m.x - s.x, m.y - s.y).toFixed(1));
 }
 
+
+// 15. Cannon pierces armour: full 5 against the Guardian's defense 4; a rifle deals only 1.
+{
+  const state = CP.createSandbox(1);
+  state.units = [];
+  const c = CP.addUnit(state, 'cannon', 8.5, 40.5);
+  const g = CP.addUnit(state, 'guardian', 12.5, 40.5);
+  g.home = { x: g.x, y: g.y };
+  CP.updateFog(state);
+  CP.orderSmart(state, [c.id], g.x, g.y - 0.3, g);
+  const dmgs = [];
+  for (let i = 0; i < 6 * CP.SIM_HZ; i++) { CP.tick(state); for (const e of state.events) if (e.type === 'dmg' && e.id === g.id) dmgs.push(e.amount); state.events.length = 0; }
+  check('cannon deals 5 to the Guardian', dmgs.length > 0 && dmgs.every((d) => d === 5), dmgs.join(','));
+  state.units = state.units.filter((u) => u !== c);
+  const r = CP.addUnit(state, 'rifleman', 8.5, 41.5);
+  const g2 = CP.addUnit(state, 'guardian', 12.5, 42.5);
+  g2.home = { x: g2.x, y: g2.y };
+  CP.updateFog(state);
+  CP.orderSmart(state, [r.id], g2.x, g2.y - 0.3, g2);
+  const d2 = [];
+  for (let i = 0; i < 4 * CP.SIM_HZ; i++) { CP.tick(state); for (const e of state.events) if (e.type === 'dmg' && e.id === g2.id) d2.push(e.amount); state.events.length = 0; }
+  check('rifle deals 1 to the Guardian', d2.length > 0 && d2.every((d) => d === 1), d2.join(','));
+}
+
+// 16. Hero: gains levels from kills, falls instead of dying and stands up by the lander.
+{
+  const state = CP.createSandbox(1);
+  state.units = state.units.filter((u) => u.type === 'settler');
+  const h = CP.addUnit(state, 'hero', 10.5, 40.5);
+  check('hero starts at level 1 with 15 hearts', h.level === 1 && h.hearts === 15);
+  for (let k = 0; k < 3; k++) {
+    const w = CP.addUnit(state, 'wormSmall', 11.5, 40.5);
+    w.home = { x: w.x, y: w.y };
+    let t = 0;
+    while (CP.unitById(state, w.id) && t++ < 40 * CP.SIM_HZ) CP.tick(state);
+  }
+  check('hero reaches level 2 after 3 small worms', h.level === 2 && h.xp === 3 && CP.maxHearts(h) === 17, `level ${h.level}, xp ${h.xp}`);
+  check('state remembers hero progress', state.hero.level === 2 && state.hero.xp === 3);
+  h.hearts = 2;
+  const m = CP.addUnit(state, 'crystalLord', 11.5, 40.5);
+  m.home = { x: m.x, y: m.y };
+  let t = 0;
+  while (!(h.down > 0) && t++ < 60 * CP.SIM_HZ) CP.tick(state);
+  check('hero falls, not dies', h.down > 0 && CP.unitById(state, h.id) === h);
+  run(state, 2);
+  check('creatures leave the fallen hero alone', !m.order || m.order.type !== 'attack' || m.order.targetId !== h.id);
+  run(state, CP.HERO.downTime);
+  const lander = state.buildings[0];
+  check('hero stands up by the lander with full hearts', !(h.down > 0) && h.hearts === CP.maxHearts(h) && CP.distToRect(h.x, h.y, lander.x, lander.y, 3) < 3);
+}
+
+// 17. MAibawu: patrols, chases, gives up 10 tiles from its route and walks back.
+{
+  const state = CP.createSandbox(1);
+  state.units = [];
+  const route = [{ x: 30.5, y: 20.5 }, { x: 36.5, y: 20.5 }];
+  const m = CP.addUnit(state, 'maibawu', 30.5, 20.5);
+  m.route = route; m.home = route[0];
+  run(state, 8);
+  check('MAibawu walks its patrol route', m.x > 32 || m.routeAt > 0, `x ${m.x.toFixed(1)}`);
+  const s = CP.addUnit(state, 'settler', m.x, 25.5);
+  run(state, 1);
+  check('MAibawu attacks a settler 5 tiles away', m.order && m.order.type === 'attack');
+  // The settler runs far south; the MAibawu turns back.
+  CP.orderMove(state, [s], 33, 44);
+  run(state, 20);
+  check('MAibawu gives up the chase and goes back', CP.distFromHome(m) < 3, CP.distFromHome(m).toFixed(1));
+}
+
+// 18. A Guardian by a deposit stops settlers mining it until it falls.
+{
+  const state = CP.createSandbox(1);
+  state.units = state.units.filter((u) => u.type === 'settler').slice(0, 1);
+  const n = CP.addNode(state, 'crystal', 12, 38, 1500);
+  const g = CP.addUnit(state, 'guardian', 14.5, 38.5);
+  g.home = { x: g.x, y: g.y };
+  n.guardId = g.id;
+  const s = state.units[0];
+  CP.updateFog(state);
+  CP.orderSmart(state, [s.id], 12.5, 38.5);
+  let guarded = false;
+  for (let i = 0; i < 20 * CP.SIM_HZ; i++) { CP.tick(state); if (state.events.some((e) => e.type === 'guarded')) guarded = true; state.events.length = 0; }
+  check('settler cannot mine a guarded deposit', guarded && n.amount === 1500);
+  g.hearts = 0;
+  run(state, 0.1);
+  CP.orderSmart(state, [s.id], 12.5, 38.5);
+  run(state, 20);
+  check('after the Guardian falls the deposit can be mined', n.amount < 1500);
+}
+
+
+// 19. Mission 3: the army walks to the rocket in steps, fighting the patrols on the way.
+{
+  const state = CP.createMission(3);
+  check('mission 3: hero and 6 MAibawu in 3 patrols', state.units.some((u) => u.type === 'hero') && state.units.filter((u) => u.type === 'maibawu').length === 6);
+  const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler');
+  const steps = [[14, 38], [22, 33], [28, 27], [36, 22], [44, 16], [50, 10], [55, 7]];
+  for (const [x, y] of steps) {
+    CP.orderMove(state, army(), x, y);
+    run(state, 25);
+  }
+  check('mission 3 is won by reaching the rocket', state.mission.result === 'win', `${army().length} fighters left, MAibawu left ${state.units.filter((u) => u.type === 'maibawu').length}`);
+}
+
+// 20. Mission 4: forge, cannon, Guardian down, crystals from the big deposit.
+{
+  const state = CP.createMission(4);
+  const settlers = () => state.units.filter((u) => u.type === 'settler');
+  const lander = state.buildings.find((b) => b.type === 'lander');
+  let f = null;
+  for (let y = lander.y - 6; y < lander.y + 2 && !f; y++)
+    for (let x = lander.x + 4; x < lander.x + 12 && !f; x++) if (CP.canPlace(state, 'forge', x, y)) f = CP.placeBuilding(state, 'forge', x, y, settlers());
+  check('forge can be placed in mission 4', !!f);
+  run(state, 30);
+  check('forge built', f && f.built);
+  CP.train(state, f, 'cannon');
+  run(state, 27);
+  const cannon = state.units.find((u) => u.type === 'cannon');
+  check('cannon trained', !!cannon);
+  const g = CP.unitById(state, state.guardId);
+  const fighters = state.units.filter((u) => u.owner === 'player' && u.type !== 'settler');
+  CP.orderMove(state, fighters, g.x - 4, g.y + 2);
+  run(state, 30);
+  CP.orderSmart(state, fighters.map((u) => u.id), g.x, g.y - 0.3, g);
+  run(state, 30);
+  check('Guardian defeated', !CP.unitById(state, state.guardId));
+  const big = state.bigNode;
+  CP.orderSmart(state, settlers().map((u) => u.id), big.x + 1, big.y + 1);
+  run(state, 200);
+  check('mission 4 is won', state.mission.result === 'win', `goal ${state.mission.goal}, mined ${big.max - big.amount}`);
+}
+
 console.log(failed ? `\n${failed} failed` : '\nall passed');
 process.exit(failed ? 1 : 0);

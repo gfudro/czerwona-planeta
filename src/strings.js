@@ -17,6 +17,7 @@
     lose: 'Koniec',
     again: 'Jeszcze',
     mission: 'Misja',
+    theEnd: 'Zwycięstwo!',
     units: {
       settler: 'Osadnik',
       infantry: 'Piechur',
@@ -26,6 +27,10 @@
       mabmia: 'Mabmia',
       wormSmall: 'Robak',
       wormBig: 'Robaczysko',
+      maibawu: 'MAibawu',
+      guardian: 'Strażnik',
+      imapia: 'Imapia',
+      crystalLord: 'Władca',
     },
     buildings: {
       lander: 'Lądownik',
@@ -37,6 +42,8 @@
       crystal: 'Kryształy',
       wreck: 'Wrak',
       nest: 'Gniazdo',
+      rocket: 'Rakieta',
+      bigCrystal: 'Złoże',
     },
   };
 })(window.CP = window.CP || {});

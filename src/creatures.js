@@ -87,10 +87,125 @@
     return c;
   }
 
+  // ---- Shaded creatures (stage 5): MAibawu and the Guardian ------------------
+
+  const CR = {};
+  function cramps() {
+    if (CR.ready) return CR;
+    CR.teal = CP.ramp(0x3a9aa8, 7, 0.75, 0.5);
+    CR.rust = CP.ramp(0x9a4a2a, 6, 0.75, 0.35);
+    CR.claw = CP.ramp(0xb0aab0, 5, 0.7, 0.5);
+    CR.shell = CP.ramp(0xb08a3a, 7, 0.75, 0.45);
+    CR.skin = CP.ramp(0x9a8a5a, 6, 0.75, 0.4);
+    CR.crystal = CP.ramp(0xa070e0, 7, 0.75, 0.8);
+    CR.crystal2 = CP.ramp(0xd8a0d8, 6, 0.7, 0.8);
+    CR.ready = true;
+    return CR;
+  }
+
+  /**
+   * MAibawu (maibawu.jpg): a tall, slender cyborg in turquoise plates over
+   * rusty copper joints, a long pointed helmet with one red eye, long arms
+   * ending in curved claws, and bird-like legs with clawed feet.
+   */
+  function maibawu(frame) {
+    const m = CP.MAT, r = cramps();
+    const c = PC(24, 34);
+    const a = frame === 1 ? -1 : frame === 2 ? 1 : 0;
+    // Legs: thigh back, shin forward (bird-like), clawed feet.
+    for (const [hx, d, back] of [[9, a, true], [12, -a, false]]) {
+      const kx = hx + 2 + d, ky = 25, fx = hx - 1 + d * 2;
+      c.line(hx, 19, kx, ky, r.rust[back ? 1 : 3]).line(hx + 1, 19, kx + 1, ky, r.rust[back ? 0 : 2]);
+      c.line(kx, ky, fx, 31, r.teal[back ? 2 : 4]).line(kx + 1, ky, fx + 1, 31, r.teal[back ? 1 : 2]);
+      c.px(kx, ky, r.teal[5]);
+      c.hline(fx - 1, fx + 3, 32, r.claw[back ? 1 : 3]).px(fx + 4, 31, r.claw[4]).px(fx - 2, 31, r.claw[2]);
+    }
+    // Slim torso of turquoise plates over a rusty belly.
+    c.litBlob(11, 14, 3.6, 5.6, r.teal);
+    c.litRect(9, 16, 4, 4, r.rust, 0.45);
+    c.hline(9, 13, 13, r.teal[2]).hline(9, 13, 17, r.rust[1]);
+    // Back arm, then the front arm reaching forward with claws.
+    c.line(9, 11, 6, 18, r.rust[1]).line(6, 18, 5, 23, r.teal[2]);
+    c.px(4, 24, r.claw[2]).px(6, 24, r.claw[2]).px(5, 25, r.claw[1]);
+    c.litBlob(13.5, 10.5, 2.4, 2, r.teal);
+    c.line(14, 12, 18, 16, r.rust[3]).line(15, 12, 19, 16, r.rust[1]);
+    c.line(18, 16, 20, 20, r.teal[4]).line(19, 16, 21, 20, r.teal[2]);
+    c.line(20, 21, 22, 23, r.claw[4]).line(21, 20, 23, 21, r.claw[3]).line(19, 21, 20, 24, r.claw[3]);
+    // Long pointed helmet bending forward, a single red eye.
+    c.litBlob(12, 5.5, 3.4, 4.6, r.teal);
+    c.litBlob(14, 7, 2.4, 2.4, r.teal);
+    c.hline(12, 16, 7, 0x1a0c10).hline(13, 16, 8, 0x1a0c10);
+    c.px(15, 7, 0xff3020).px(16, 7, 0xff8060);
+    c.vline(11, 2, 8, r.teal[1]);
+    c.selOutline(0.7);
+    c.shadow(11, 32.5, 7, 1.6, 80);
+    c.glow(15.5, 7, 2.2, 1.6, 0xff3020, 120, true);
+    return c;
+  }
+
+  /** One crystal spike: a lit left face and a darker right face. */
+  function spike(c, x, base, h, w, lean, rp) {
+    for (let y = 0; y < h; y++) {
+      const t = y / h, half = w * (1 - t * 0.85);
+      const cx = x + lean * y;
+      for (let xx = Math.floor(cx - half); xx <= Math.ceil(cx + half); xx++) {
+        const left = xx + 0.5 < cx;
+        const l = (left ? 0.75 : 0.35) + t * 0.15 + (CP.hash(xx, base - y, 9) - 0.5) * 0.08;
+        c.px(xx, base - y, CP.tone(rp, l, xx, base - y));
+      }
+    }
+    c.px(x + lean * (h - 1), base - h + 1, 0xffffff);
+  }
+
+  /**
+   * Guardian of the crystal biome (straznik-krystalicznego-biomu.jpg): a big
+   * tortoise in a riveted brass shell grown over with violet crystals, a
+   * steam pipe with a gauge, sturdy clawed legs and a wise head with a blue eye.
+   */
+  function guardian(frame) {
+    const m = CP.MAT, r = cramps();
+    const c = PC(40, 30);
+    const a = frame === 1 ? -1 : frame === 2 ? 1 : 0;
+    // Back legs, then the shell, then front legs.
+    for (const [x, d] of [[9, a], [25, -a]]) {
+      c.litRect(x + d, 21, 5, 6, r.skin, 0.35);
+      c.hline(x + d - 1, x + d + 5, 27, r.claw[2]);
+    }
+    // Shell: a lit dome of brass plates with rivets.
+    c.litBlob(19, 18, 14, 8.5, r.shell, { clipY: 23 });
+    for (let x = 6; x <= 32; x += 5) c.vline(x + ((x / 5) & 1), 14, 23, r.shell[1]);
+    c.hline(5, 33, 23, r.shell[0]).hline(6, 32, 22, r.shell[5]);
+    for (let x = 7; x <= 31; x += 4) c.rivet(x, 20, m.brass);
+    // Crystals growing on the shell.
+    const spikes = [[11, 13, 7, 1.6, -0.15, r.crystal], [15, 12, 11, 2.2, -0.05, r.crystal], [19, 11, 13, 2.4, 0.02, r.crystal2], [23, 12, 9, 2, 0.1, r.crystal], [27, 14, 7, 1.6, 0.18, r.crystal2], [8, 15, 4, 1.2, -0.3, r.crystal2], [30, 15, 4, 1.2, 0.3, r.crystal]];
+    for (const [x, b, h, w, lean, rp] of spikes) spike(c, x, b, h, w, lean, rp);
+    // Steam pipe with a gauge.
+    c.litCylinder(13, 6, 13, 1, m.copper);
+    c.litBlob(13, 6, 2.2, 2.2, m.brass);
+    c.px(13, 6, 0xffffff).px(14, 5, 0x1a0c08);
+    // Front legs.
+    for (const [x, d] of [[13, -a], [29, a]]) {
+      c.litRect(x + d, 22, 5, 5, r.skin, 0.55);
+      c.hline(x + d, x + d + 5, 27, r.claw[3]).px(x + d + 5, 26, r.claw[4]);
+    }
+    // Head on a short neck, looking right, with a blue eye and crystal studs.
+    c.litBlob(33, 19, 3, 2.6, r.skin);
+    c.litBlob(36, 16.5, 3.2, 3, r.skin);
+    c.px(37, 15, 0x5ad8ff).px(37, 16, 0x1a3a6a).px(36, 15, 0xffffff);
+    c.px(35, 14, r.crystal[5]).px(34, 15, r.crystal[3]);
+    c.hline(36, 38, 18, r.skin[1]);
+    c.selOutline(0.7);
+    c.shadow(20, 27.5, 16, 2.2, 80);
+    c.glow(13, 2, 2.5, 2, 0xe0dcdc, 120, true);
+    return c;
+  }
+
   CP.CREATURE_PAINT = {
     mabmia: (f) => mabmia(f),
     wormSmall: (f) => worm(false, f),
     wormBig: (f) => worm(true, f),
+    maibawu,
+    guardian,
   };
 
   // Where each sprite stands: footX/footY is the art pixel at the feet.
@@ -99,5 +214,7 @@
     mabmia: { footX: 11, footY: 34, hitW: 7, hitH: 33 },
     wormSmall: { footX: 13, footY: 19, hitW: 12, hitH: 18 },
     wormBig: { footX: 25, footY: 33, hitW: 22, hitH: 30 },
+    maibawu: { footX: 11, footY: 32, hitW: 8, hitH: 31 },
+    guardian: { footX: 20, footY: 27, hitW: 18, hitH: 25 },
   });
 })(window.CP = window.CP || {});

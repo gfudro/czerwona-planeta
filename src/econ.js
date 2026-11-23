@@ -5,7 +5,7 @@
   const DT = () => CP.DT();
 
   function nodeResource(n) {
-    return n.kind === 'wreck' ? 'scrap' : 'crystals';
+    return n.kind === 'wreck' || n.kind === 'rocket' ? 'scrap' : 'crystals';
   }
 
   /** The built lander nearest to a point (where settlers unload). */
@@ -28,6 +28,13 @@
       if (d < bd) { bd = d; best = n; }
     }
     return best;
+  }
+
+  function isGuarded(state, n) {
+    if (n.guardId == null) return false;
+    const g = CP.unitById(state, n.guardId);
+    if (!g) n.guardId = null;
+    return !!g;
   }
 
   /** A settler comes out of a crystal deposit on the side facing the lander. */
@@ -62,13 +69,20 @@
       u.order.kind = n.kind;
       u.lastNode = n.id;
       if (u.carry) { u.order = { type: 'return', nodeId: n.id, kind: n.kind }; return; }
+      // A deposit with a living Guardian beside it can't be mined.
+      if (u.work <= 0 && isGuarded(state, n) && CP.distToRect(u.x, u.y, n.x, n.y, n.size) < 1.5) {
+        u.order = null;
+        CP.stop(u);
+        state.events.push({ type: 'guarded', x: n.x + n.size / 2, y: n.y + n.size / 2 });
+        return;
+      }
       if (u.work <= 0) {
         const at = CP.approachRect(state, u, n.x, n.y, n.size);
         if (at === null) { u.order = null; return; }
         if (!at) return;
         // Start working: into the deposit, or beside the wreck.
         u.work = 0.0001;
-        if (n.kind === 'crystal') { u.hidden = true; u.insideId = n.id; }
+        if (n.kind === 'crystal' || n.kind === 'bigCrystal') { u.hidden = true; u.insideId = n.id; }
         if (n.x + n.size / 2 !== u.x) u.facing = n.x + n.size / 2 > u.x ? 1 : -1;
         return;
       }
@@ -93,7 +107,7 @@
       state.res[u.carry.kind] += u.carry.amount;
       state.gathered[u.carry.kind] += u.carry.amount;
       state.events.push({ type: 'unload', x: u.x, y: u.y, kind: u.carry.kind, amount: u.carry.amount });
-      const kind = u.carry.kind === 'scrap' ? 'wreck' : 'crystal';
+      const kind = u.order.kind || (u.carry.kind === 'scrap' ? 'wreck' : 'crystal');
       u.carry = null;
       const nodeId = u.order.nodeId;
       u.order = { type: 'gather', nodeId, kind };
@@ -232,7 +246,7 @@
   }
 
   Object.assign(CP, {
-    nodeResource, nearestDepot, exitDeposit, popCap, popUsed, canAfford,
+    nodeResource, nearestDepot, isGuarded, exitDeposit, popCap, popUsed, canAfford,
     trainBlocker, train, cancelTrain, canPlace, placeBuilding, updateEconomy,
   });
 })(window.CP = window.CP || {});

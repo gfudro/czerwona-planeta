@@ -3,7 +3,7 @@
 (function (CP) {
   'use strict';
 
-  CP.VERSION = '0.5.4';
+  CP.VERSION = '0.6.0';
 
   // Art pixels per tile, and how many screen pixels each art pixel takes.
   CP.ART_TILE = 32;
@@ -24,12 +24,18 @@
     settler: { side: 'player', hearts: 5, attack: '1', defense: 0, speed: 2, range: 1, cooldown: 1.5, sight: 5, cost: [50, 0], build: 10 },
     infantry: { side: 'player', hearts: 12, attack: '4', defense: 2, speed: 1.8, range: 1, cooldown: 1.2, sight: 5, cost: [60, 20], build: 15 },
     rifleman: { side: 'player', hearts: 7, attack: '3', defense: 0, speed: 2, range: 5, cooldown: 1.5, sight: 7, cost: [50, 30], build: 15 },
-    cannon: { side: 'player', hearts: 10, attack: '5', defense: 1, speed: 1, range: 7, cooldown: 3, sight: 8, cost: [80, 80], build: 25 },
+    // pierce: ignores the target's defense (the cannon is the answer to the Guardian).
+    cannon: { side: 'player', hearts: 10, attack: '5', defense: 1, speed: 1, range: 7, cooldown: 3, sight: 8, cost: [80, 80], build: 25, pierce: true },
     hero: { side: 'player', hearts: 15, attack: '1k6+2', defense: 2, speed: 2.2, range: 1, cooldown: 1, sight: 7 },
 
     mabmia: { side: 'neutral', hearts: 7, attack: '1', defense: 0, speed: 1, range: 1, cooldown: 1.5, sight: 0 },
     wormSmall: { side: 'wild', hearts: 5, attack: '1k2', defense: 2, speed: 3, range: 1, cooldown: 1, sight: 5 },
     wormBig: { side: 'wild', hearts: 15, attack: '1k2', defense: 2, speed: 1.5, range: 1, cooldown: 1.5, sight: 5 },
+    // leash: how far (tiles) a creature chases from its home or patrol route.
+    maibawu: { side: 'wild', hearts: 9, attack: '2', defense: 2, speed: 2, range: 1, cooldown: 1.2, sight: 6, leash: 10 },
+    guardian: { side: 'wild', hearts: 12, attack: '1k2-1', defense: 4, speed: 0.5, range: 1, cooldown: 2, sight: 2, leash: 3 },
+    imapia: { side: 'wild', hearts: 20, attack: '1k4', defense: 2, speed: 1.6, range: 1, cooldown: 1.2, sight: 6, leash: 8, boss: true },
+    crystalLord: { side: 'wild', hearts: 25, attack: '2k4', defense: 3, speed: 1.2, range: 1, cooldown: 1.5, sight: 5, leash: 6, boss: true },
   };
 
   CP.BUILDING_TYPES = {
@@ -39,8 +45,17 @@
     forge: { size: 3, sight: 4, cost: [120, 120], build: 40, trains: ['cannon'] },
   };
 
-  // What a settler can build (the forge comes with the cannon, in stage 5).
+  // What a settler can build; a mission may allow more (the forge from mission 4).
   CP.SETTLER_BUILDS = ['dome', 'workshop'];
+
+  // Hero: points for each creature he finishes off, and points needed for levels 2..5.
+  CP.HERO = {
+    xp: { wormSmall: 1, wormBig: 2, maibawu: 2, guardian: 3, imapia: 5, crystalLord: 5 },
+    levels: [3, 7, 12, 18],
+    heartsPerLevel: 2,
+    attackPerLevel: 1,
+    downTime: 20,
+  };
 
   CP.ECON = {
     carry: 10, // crystals or scrap per trip

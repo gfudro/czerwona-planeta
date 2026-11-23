@@ -10,7 +10,7 @@
   const M = () => CP.MAT;
 
   // How many art pixels each sprite rises above its footprint.
-  const RISE = { crystal: 26, wreck: 8, dome: 22, workshop: 34, lander: 40, nest: 6 };
+  const RISE = { crystal: 26, wreck: 8, dome: 22, workshop: 34, lander: 40, nest: 6, forge: 62, rocket: 52, bigCrystal: 40 };
   CP.SPRITE_RISE = RISE;
 
   // ---- Lander --------------------------------------------------------------
@@ -497,8 +497,161 @@
     return c;
   }
 
+
+  // ---- Steam forge -----------------------------------------------------------
+
+  /** The steam forge: a brick kiln with a glowing mouth, an iron shed, a tall chimney and an anvil (3×3 tiles). */
+  function forge() {
+    const m = M();
+    const c = PC(T * 3, T * 3 + RISE.forge).origin(0, RISE.forge);
+    // Tall chimney at the back right.
+    c.litCylinder(72, -40, 20, 5.5, m.brick, { rough: 0.15, seed: 11 });
+    for (let y = -36; y < 20; y += 4) for (let x = 67; x <= 77; x++) if (((x + (y >> 2)) & 3) === 0) c.shade(x, y + RISE.forge, 0.25);
+    c.litCylinder(72, -44, -39, 7, m.copper);
+    // Iron shed on the right: walls of riveted plates, a sloped roof.
+    c.litRect(50, 30, 40, 54, m.iron, 0.48, { grain: 0.12, seed: 12, ao: 0.25 });
+    for (let x = 52; x < 90; x += 9) { c.vline(x, 31, 83, m.iron[1]); c.vline(x + 1, 31, 83, m.iron[4]); }
+    for (let y = 34; y < 84; y += 10) for (let x = 54; x < 90; x += 9) c.rivet(x, y, m.steel);
+    c.litPoly([46, 32, 94, 32, 90, 18, 52, 18], m.copper, 0.6, { grain: 0.1, seed: 13 });
+    c.hline(46, 94, 32, m.copper[1]).hline(52, 90, 18, m.copper[5]);
+    // Brass gear on the shed.
+    const gx = 70, gy = 50;
+    for (let y = gy - 10; y <= gy + 10; y++)
+      for (let x = gx - 10; x <= gx + 10; x++) {
+        const dx = x + 0.5 - gx, dy = y + 0.5 - gy, rr = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+        const R = 7 + (Math.cos(a * 8) > 0.2 ? 2.5 : 0);
+        if (rr > R || rr < 2) continue;
+        let l = 0.6;
+        if (rr > R - 1.5) l += (-(dx / rr) * 0.55 - (dy / rr) * 0.6) * 0.5;
+        c.px(x, y, CP.tone(m.brass, l, x, y));
+      }
+    // Shed door with warm light.
+    c.litRect(62, 64, 16, 20, m.warm, 0.75, { grain: 0.15, seed: 14, ao: 0.3 });
+    c.vline(70, 64, 83, m.iron[1]).hline(62, 77, 64, m.iron[1]);
+    // Brick kiln on the left: a big half-dome with an arched, glowing mouth.
+    for (let y = 18; y < 86; y++)
+      for (let x = 2; x < 56; x++) {
+        const nx = (x + 0.5 - 29) / 27, ny = (y + 0.5 - 58) / 40;
+        if (y > 58 ? Math.abs(nx) > 1 : nx * nx + ny * ny > 1) continue;
+        const nz = Math.sqrt(Math.max(0, 1 - nx * nx - (y > 58 ? 0 : ny * ny)));
+        const row = Math.floor(y / 4), mortar = y % 4 === 3 || (x + (row & 1) * 3) % 6 === 5;
+        let l = CP.lightOf(nx, y > 58 ? 0 : ny, nz);
+        if (y > 74) l -= (y - 74) * 0.02;
+        c.px(x, y, CP.tone(mortar ? m.mortar : m.brick, l + (CP.hash(x >> 1, row, 15) - 0.5) * 0.12 - (mortar ? 0.1 : 0), x, y + RISE.forge));
+      }
+    // The mouth: fire inside, hottest in the middle.
+    for (let y = 56; y < 84; y++)
+      for (let x = 16; x < 42; x++) {
+        const ax = (x + 0.5 - 29) / 13, ay = (y + 0.5 - 66) / 10;
+        if (y < 66 && ax * ax + ay * ay > 1) continue;
+        const heat = 1 - Math.min(1, Math.hypot(ax, (y + 0.5 - 78) / 12));
+        c.px(x, y, CP.tone(m.warm, 0.35 + heat * 0.7 + (CP.hash(x, y, 16) - 0.5) * 0.2, x, y + RISE.forge));
+      }
+    for (let x = 15; x <= 43; x++) {
+      const ax = (x + 0.5 - 29) / 14;
+      if (Math.abs(ax) <= 1) c.px(x, Math.round(66 - Math.sqrt(1 - ax * ax) * 11), m.rock[5]);
+    }
+    c.litRect(14, 83, 30, 3, m.rock, 0.45, { grain: 0.3, seed: 17 });
+    // Anvil in front of the kiln.
+    c.litRect(44, 76, 12, 3, m.iron, 0.6);
+    c.litPoly([46, 79, 54, 79, 53, 84, 47, 84], m.iron, 0.4);
+    c.px(44, 76, m.steel[5]).px(45, 76, m.steel[5]);
+    // Copper pipe from the kiln to the shed.
+    for (let x = 40; x < 56; x++) c.px(x, 30, m.copper[4]).px(x, 31, m.copper[2]).px(x, 32, m.copper[1]);
+    c.litBlob(48, 31, 2.5, 2.5, m.brass);
+    c.selOutline();
+    c.shadow(50, 88, 46, 8, 70);
+    c.glow(29, 76, 20, 12, 0xffa040, 90);
+    c.glow(72, -48, 8, 6, 0x3a3034, 140).glow(78, -54, 7, 5, 0x5a5054, 110).glow(70, -58, 6, 4, 0x7a7074, 90);
+    return c;
+  }
+
+  // ---- Rocket wreck ----------------------------------------------------------
+
+  /**
+   * The rocket of the earlier expedition (mission 3): a tall silver rocket
+   * that came down crooked, leaning to the right with its fins half buried
+   * in a heap of sand, hull plates torn open and streaked with rust (3×3 tiles).
+   */
+  function rocket() {
+    const m = M();
+    const c = PC(T * 3, T * 3 + RISE.rocket).origin(0, RISE.rocket);
+    const HULL = CP.ramp(0xc8ccd4, 7, 0.75, 0.35);
+    const BAND = CP.ramp(0x2a6ab0, 6, 0.7, 0.4);
+    const ax = 34, ay = 78, bx = 62, by = -48; // axis: base to tip
+    const len = Math.hypot(bx - ax, by - ay), ux = (bx - ax) / len, uy = (by - ay) / len;
+    const vx = -uy, vy = ux; // across the hull
+    const radius = (t) => (t < 0.72 ? 13 : t < 1 ? 13 * Math.sqrt(1 - ((t - 0.72) / 0.28) ** 2) : 0);
+    // Fins behind the body.
+    c.litPoly([ax - 12, ay - 22, ax - 26, ay + 4, ax - 10, ay + 2], HULL, 0.35, { grain: 0.1, seed: 21 });
+    for (let y = -RISE.rocket; y < T * 3; y++)
+      for (let x = 0; x < T * 3; x++) {
+        const px = x + 0.5 - ax, py = y + 0.5 - ay;
+        const t = (px * ux + py * uy) / len, d = px * vx + py * vy;
+        if (t < 0 || t > 1) continue;
+        const rad = radius(t);
+        if (Math.abs(d) > rad) continue;
+        const n = d / rad, nz = Math.sqrt(1 - n * n);
+        let l = CP.lightOf(n * vx, n * vy - 0.1, nz) + (CP.hash(x >> 1, y >> 1, 22) - 0.5) * 0.06;
+        let rp = HULL;
+        if ((t > 0.3 && t < 0.36) || (t > 0.7 && t < 0.73)) rp = BAND;
+        if (t > 0.88) rp = m.copper;
+        // Rust streaks running down from the seams.
+        if (CP.hash(Math.round(d), 0, 23) < 0.18 && t < 0.6 && CP.hash(x, y, 24) < 0.6) rp = m.rust;
+        // Seams around the hull.
+        if (Math.abs(((t * len) % 14) - 7) < 0.5) l -= 0.25;
+        c.px(x, y, CP.tone(rp, l, x, y));
+      }
+    // A porthole and a torn-open plate showing dark ribs inside.
+    const at = (t, d) => [ax + ux * len * t + vx * d, ay + uy * len * t + vy * d];
+    const [wx, wy] = at(0.58, -2);
+    c.litBlob(wx, wy, 5, 5, m.brass);
+    c.litBlob(wx, wy, 3.4, 3.4, CP.ramp(0x1e5a60, 6));
+    c.px(Math.round(wx) - 2, Math.round(wy) - 2, 0xffffff);
+    const [hx, hy] = at(0.2, 3);
+    c.litPoly([hx - 6, hy - 6, hx + 5, hy - 9, hx + 7, hy + 3, hx - 4, hy + 6], m.iron, 0.1, { seed: 25 });
+    for (let k = -4; k <= 4; k += 3) c.line(hx + k - 3, hy - 6, hx + k + 2, hy + 4, m.steel[2]);
+    c.litPoly([hx + 7, hy + 3, hx + 14, hy + 8, hx + 9, hy - 2], HULL, 0.8, { seed: 26 });
+    // Front fin.
+    c.litPoly([ax + 10, ay - 18, ax + 26, ay + 6, ax + 8, ay + 4], HULL, 0.62, { grain: 0.1, seed: 27 });
+    c.line(ax + 10, ay - 18, ax + 26, ay + 6, HULL[6]);
+    // A heap of sand at the base, and loose plates around.
+    c.litBlob(40, 86, 34, 9, m.sand, { rough: 0.3, seed: 28, clipY: 95 });
+    c.litPoly([6, 70, 16, 67, 18, 72, 8, 75], m.rust, 0.5, { grain: 0.2, seed: 29 });
+    c.litPoly([78, 74, 90, 72, 89, 78, 79, 79], HULL, 0.6, { grain: 0.2, seed: 30 });
+    c.selOutline(0.6);
+    c.shadow(56, 90, 40, 6, 60);
+    return c;
+  }
+
+  // ---- Big crystal deposit ---------------------------------------------------
+
+  /** The big deposit the Guardian keeps: a cluster of tall crystals on a rock shelf (3×3 tiles). */
+  function bigCrystal() {
+    const m = M();
+    const c = PC(T * 3, T * 3 + RISE.bigCrystal).origin(0, RISE.bigCrystal);
+    c.litBlob(48, 70, 42, 17, m.rock, { rough: 0.25, seed: 31 });
+    c.litBlob(16, 76, 14, 9, m.rock, { rough: 0.25, seed: 32 });
+    c.litBlob(80, 74, 14, 10, m.rock, { rough: 0.25, seed: 33 });
+    for (const [x, y] of [[4, 84], [92, 84], [40, 88], [64, 88]]) c.litBlob(x, y, 2.5, 1.6, m.rock);
+    crystal(c, 18, 70, 22, 4.5, -5, -0.05);
+    crystal(c, 30, 66, 40, 6, -4);
+    crystal(c, 72, 68, 34, 6, 5);
+    crystal(c, 84, 74, 18, 4, 6, -0.05);
+    crystal(c, 52, 64, 62, 8.5, 2);
+    crystal(c, 40, 76, 24, 5, -3);
+    crystal(c, 62, 78, 20, 4.5, 3);
+    crystal(c, 26, 82, 10, 3, -2);
+    for (const [x, y] of [[54, -18], [30, 14], [74, 22], [14, 42], [88, 50]]) c.px(x, y, 0xffffff).px(x - 1, y, 0xd8b8ff).px(x + 1, y, 0xd8b8ff).px(x, y - 1, 0xd8b8ff).px(x, y + 1, 0xd8b8ff);
+    c.selOutline(0.55);
+    c.glow(48, 74, 46, 15, 0xb070ff, 100, true);
+    c.shadow(54, 84, 40, 7, 60);
+    return c;
+  }
+
   const cache = new Map();
   const PAINT = {
+    forge, rocket, bigCrystal,
     crystal: crystalDeposit, wreck, debris, nest, dome, workshop, lander,
     scaffold2: () => scaffold(2), scaffold3: () => scaffold(3),
   };
@@ -553,6 +706,31 @@
     settler(c) {
       c.ellipse(8, 5, 4, 4, 0xc89a3c).ellipse(9, 5, 2.6, 2.6, 0x4aa8a8).px(8, 4, 0x9ee8e0);
       c.poly([4, 15, 4, 9, 12, 9, 12, 15], 0xf28a1e);
+    },
+    star(c) {
+      c.poly([8, 1, 10, 6, 15, 6, 11, 9, 13, 15, 8, 11, 3, 15, 5, 9, 1, 6, 6, 6], 0xf2c230);
+      c.poly([8, 1, 10, 6, 15, 6, 11, 9, 8, 8], 0xffe680);
+    },
+    forge(c) {
+      c.rect(2, 6, 12, 8, 0x8a3a2a).rect(2, 5, 12, 2, 0xc89a3c);
+      c.rect(10, 1, 3, 5, 0x4a4c56);
+      c.rect(5, 9, 5, 4, 0xffa040).px(6, 10, 0xffe080);
+    },
+    flag(c) {
+      c.vline(4, 1, 15, 0x6a6e78).vline(5, 1, 15, 0xa8acb4);
+      c.poly([6, 2, 14, 4, 6, 8], 0xf28a1e);
+    },
+    rocket(c) {
+      c.poly([8, 1, 11, 5, 11, 12, 5, 12, 5, 5], 0xc0c4cc);
+      c.poly([8, 1, 5, 5, 5, 12, 7, 12, 7, 5], 0xe8ecf0);
+      c.poly([5, 9, 2, 14, 5, 13], 0xb0582c).poly([11, 9, 14, 14, 11, 13], 0xb0582c);
+      c.ellipse(8, 7, 1.5, 1.5, 0x3aa8a0);
+    },
+    skull(c) {
+      c.ellipse(8, 7, 5.5, 5, 0xe8402a);
+      c.rect(5, 11, 6, 3, 0xe8402a);
+      c.ellipse(6, 7, 1.5, 1.8, 0x1a0806).ellipse(10, 7, 1.5, 1.8, 0x1a0806);
+      c.vline(7, 12, 13, 0x1a0806).vline(9, 12, 13, 0x1a0806);
     },
     check(c) {
       c.line(3, 8, 6, 11, 0x4dff6a).line(6, 11, 13, 4, 0x4dff6a).line(3, 9, 6, 12, 0x4dff6a).line(6, 12, 13, 5, 0x4dff6a);

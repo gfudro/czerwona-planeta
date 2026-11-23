@@ -41,6 +41,119 @@
     };
   }
 
+  /**
+   * Ruins: old stone walls of a creature town. Walls run as thick, ragged
+   * lines between the centres of neighbouring wall tiles (so they don't
+   * follow the tile grid), with a height that changes along the wall:
+   * whole stretches, broken tops, and low stumps where it fell. Each wall
+   * shows a lit top of stone blocks and a front face of stone courses,
+   * casts a shadow, and has rubble scattered around it.
+   */
+  function paintRuins(c, map, T) {
+    const isRuin = (tx, ty) => CP.inBounds(map, tx, ty) && map.terrain[ty * map.w + tx] === CP.T.RUIN;
+    const segs = [];
+    for (let ty = 0; ty < map.h; ty++)
+      for (let tx = 0; tx < map.w; tx++) {
+        if (!isRuin(tx, ty)) continue;
+        const cx = tx * T + 16, cy = ty * T + 16;
+        let linked = false;
+        if (isRuin(tx + 1, ty)) { segs.push([cx, cy, cx + T, cy]); linked = true; }
+        if (isRuin(tx, ty + 1)) { segs.push([cx, cy, cx, cy + T]); linked = true; }
+        if (!linked && !isRuin(tx - 1, ty) && !isRuin(tx, ty - 1)) segs.push([cx - 6, cy, cx + 6, cy]);
+      }
+    if (!segs.length) return;
+    const W = map.w * T, H = map.h * T;
+    // Footprint and height of the walls.
+    const hgt = new Float32Array(W * H);
+    for (const [ax, ay, bx, by] of segs) {
+      const x0 = Math.max(0, Math.min(ax, bx) - 18), x1 = Math.min(W - 1, Math.max(ax, bx) + 18);
+      const y0 = Math.max(0, Math.min(ay, by) - 18), y1 = Math.min(H - 1, Math.max(ay, by) + 18);
+      const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy;
+      for (let y = y0; y <= y1; y++)
+        for (let x = x0; x <= x1; x++) {
+          const t = Math.max(0, Math.min(1, ((x + 0.5 - ax) * vx + (y + 0.5 - ay) * vy) / l2));
+          const d = Math.hypot(x + 0.5 - ax - vx * t, y + 0.5 - ay - vy * t);
+          const half = 10 + vnoise(x, y, 9, 430) * 4 + (vnoise(x, y, 3, 431) - 0.5) * 2.5;
+          if (d > half) continue;
+          // Height along the wall: tall stretches, broken tops and fallen stumps.
+          const along = vx ? x : y;
+          const n = vnoise(along, vx ? y >> 5 : x >> 5, 20, 432);
+          let h = n < 0.3 ? 2 + n * 6 : 7 + (n - 0.3) * 16;
+          h += Math.floor(CP.hash(along >> 2, 0, 433) * 3) - (d > half - 2 ? 1 : 0);
+          const i = y * W + x;
+          if (h > hgt[i]) hgt[i] = h;
+        }
+    }
+    const STONE = CP.ramp(0xa88a78, 7, 0.75, 0.45);
+    const FACE = CP.ramp(0x7a5a4e, 6, 0.8, 0.3);
+    const RUNE = 0x5ad8c8;
+    // Rubble and a few worn slabs on the ground near the walls (before the walls).
+    for (let ty = 0; ty < map.h; ty++)
+      for (let tx = 0; tx < map.w; tx++) {
+        if (map.terrain[ty * map.w + tx] > CP.T.DUNE) continue;
+        let near = 0;
+        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (isRuin(tx + ox, ty + oy)) near++;
+        if (!near) continue;
+        for (let k = 0; k < 2 + near; k++) {
+          if (CP.hash(tx, ty, 440 + k) > 0.4) continue;
+          const sx = tx * T + 3 + Math.floor(CP.hash(tx, ty, 450 + k) * 24), sy = ty * T + 3 + Math.floor(CP.hash(tx, ty, 460 + k) * 24);
+          const big = CP.hash(tx, ty, 470 + k) < 0.3;
+          const rw = big ? 4 : 2, rh = big ? 3 : 2;
+          for (let y = -rh; y <= rh; y++)
+            for (let x = -rw; x <= rw; x++) {
+              if (Math.abs(x) + Math.abs(y) > rw + rh - 1) continue;
+              const l = 0.6 - (x + y) * 0.07;
+              c.raw(sx + x, sy + y, CP.tone(STONE, l, sx + x, sy + y));
+            }
+          for (let x = -rw + 1; x <= rw; x++) c.raw(sx + x + 1, sy + rh + 1, CP.mix(c.get(sx + x + 1, sy + rh + 1) | 0, 0x3a1424, 0.35));
+        }
+      }
+    // Shadow of the walls to the bottom-right.
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        if (hgt[y * W + x] > 0) continue;
+        let sh = 0;
+        for (let s = 2; s <= 6; s += 2) {
+          const sx = x - s, sy = y - s;
+          if (sx >= 0 && sy >= 0 && hgt[sy * W + sx] > s) { sh = 1; break; }
+        }
+        if (sh && ((x + y) & 1 || CP.hash(x, y, 441) < 0.6)) c.raw(x, y, CP.mix(c.get(x, y), 0x3a1424, 0.3));
+      }
+    // Walls, row by row from the top: a front face down from each bottom edge, then the lifted top.
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const h = Math.round(hgt[y * W + x]);
+        if (!h) continue;
+        const bottom = y + 1 >= H || hgt[(y + 1) * W + x] === 0;
+        if (bottom) {
+          for (let k = 0; k <= h; k++) {
+            const yy = y - h + k;
+            if (yy < 0) continue;
+            const course = Math.floor(k / 3), seam = k % 3 === 2 || (x + course * 4) % 7 === 0;
+            let l = 0.5 - k * 0.025 + (CP.hash(x >> 2, course + (y >> 3), 442) - 0.5) * 0.18;
+            if (seam) l -= 0.18;
+            c.raw(x, yy, CP.tone(FACE, l, x, yy));
+          }
+          if (h > 6 && CP.hash(x >> 3, y >> 3, 443) < 0.05 && x % 8 === 3) {
+            const ry = y - Math.floor(h / 2);
+            c.raw(x, ry - 1, RUNE).raw(x, ry, RUNE).raw(x, ry + 1, RUNE).raw(x + 1, ry, RUNE).raw(x + 2, ry - 1, RUNE).raw(x + 2, ry + 1, RUNE);
+          }
+        }
+        const ty = y - h;
+        if (ty < 0) continue;
+        // Top face: blocks with seams; edges toward the light are brighter.
+        const by = Math.floor(y / 5), bx = Math.floor((x + (by & 1) * 4) / 8);
+        const seam = y % 5 === 4 || (x + (by & 1) * 4) % 8 === 7;
+        let l = 0.62 + (CP.hash(bx, by, 444) - 0.5) * 0.22 + (CP.hash(x, y, 445) - 0.5) * 0.08 + (h - 8) * 0.012;
+        if (seam) l -= 0.2;
+        const up = y > 0 ? hgt[(y - 1) * W + x] : 0, lf = x > 0 ? hgt[y * W + x - 1] : 0, rt = x + 1 < W ? hgt[y * W + x + 1] : 0;
+        if (up === 0 || lf === 0) l += 0.16;
+        if (rt === 0) l -= 0.16;
+        // Reach two rows down too, so a step in height never leaves a gap in the top.
+        for (let k = 0; k < 3 && ty + k < y; k++) c.raw(x, ty + k, CP.tone(STONE, l - k * 0.04, x, ty + k));
+      }
+  }
+
   CP.paintTerrain = function (map) {
     const T = CP.ART_TILE;
     const W = map.w * T, H = map.h * T;
@@ -183,6 +296,8 @@
         if (sh > 0 && sh * 0.9 > th * 0.6) col = CP.mix(col, 0x3a1424, 0.28 * sh + 0.06);
         put(i, col);
       }
+
+    paintRuins(c, map, T);
 
     // Pebbles on the sand.
     for (let ty = 0; ty < map.h; ty++)

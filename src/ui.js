@@ -23,8 +23,15 @@
     return c;
   }
 
+  /** Goal icon: a small icon, or a creature's portrait fitted into a square. */
   function goalIcon(name) {
-    return name === 'settler' ? CP.icon('settler') : CP.icon(name);
+    if (!CP.UNIT_TYPES[name] || name === 'settler') return CP.icon(name);
+    const spr = CP.unitSprite(name, 0, false);
+    const n = Math.max(spr.width, spr.height);
+    const c = document.createElement('canvas');
+    c.width = c.height = n;
+    c.getContext('2d').drawImage(spr, Math.floor((n - spr.width) / 2), n - spr.height);
+    return c;
   }
 
   /** Cost as coloured numbers with icons, like in Gród. */
@@ -107,7 +114,7 @@
       base.width = map.w;
       base.height = map.h;
       const bctx = base.getContext('2d');
-      const COLORS = { [CP.T.SAND]: '#c4623a', [CP.T.DUNE]: '#a84e2e', [CP.T.ROCK]: '#4e2418', [CP.T.CRACK]: '#24100c' };
+      const COLORS = { [CP.T.SAND]: '#c4623a', [CP.T.DUNE]: '#a84e2e', [CP.T.ROCK]: '#4e2418', [CP.T.CRACK]: '#24100c', [CP.T.RUIN]: '#9a8478', [CP.T.LAVA]: '#ff7a20' };
       for (let y = 0; y < map.h; y++)
         for (let x = 0; x < map.w; x++) {
           bctx.fillStyle = COLORS[map.terrain[y * map.w + x]];
@@ -233,7 +240,7 @@
       if (node) {
         // How much is left: crystals in a deposit, scrap in a wreck.
         const line = h('div', 'selNum');
-        line.appendChild(iconEl(CP.icon(node.kind === 'wreck' ? 'scrap' : 'crystal'), 'icon20'));
+        line.appendChild(iconEl(CP.icon(CP.nodeResource(node) === 'scrap' ? 'scrap' : 'crystal'), 'icon20'));
         line.appendChild(document.createTextNode(` ${node.amount}/${node.max}`));
         panel.appendChild(card(iconEl(CP.objectSprite(node.kind), 'bpic'), STR.things[node.kind], line));
         return;
@@ -258,7 +265,7 @@
       for (const u of units) byType.set(u.type, (byType.get(u.type) || []).concat(u));
       for (const [type, list] of byType) {
         const pic = iconEl(CP.unitSprite(type, 0, false), 'portrait ' + type);
-        const line = list.length === 1 ? heartsLine(list[0].hearts, CP.UNIT_TYPES[type].hearts) : h('div', 'selNum', '× ' + list.length);
+        const line = list.length === 1 ? heartsLine(Math.max(0, list[0].hearts), CP.maxHearts(list[0])) : h('div', 'selNum', '× ' + list.length);
         panel.appendChild(card(pic, STR.units[type], line));
       }
     }
@@ -279,7 +286,7 @@
       cmd.innerHTML = '';
       const settlers = units.filter((u) => u.type === 'settler' && u.owner === 'player');
       if (settlers.length && !b) {
-        for (const type of CP.SETTLER_BUILDS) {
+        for (const type of state.builds || CP.SETTLER_BUILDS) {
           const def = CP.BUILDING_TYPES[type];
           const ok = CP.canAfford(state, def.cost);
           cmd.appendChild(cmdButton(iconEl(CP.objectSprite(type), 'bicon'), STR.buildings[type], def.cost, state, ok, () => {

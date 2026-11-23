@@ -100,6 +100,8 @@
         if (e.type === 'spotted') {
           ui.ping(e.x, e.y, now);
           if (autoPause) paused = true;
+        } else if (e.type === 'xp') {
+          CP.saveHero(state.hero);
         } else if (e.type === 'win') {
           CP.saveWin(state.mission.id);
           endAt = now + 1500;

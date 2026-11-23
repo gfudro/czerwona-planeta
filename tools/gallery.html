@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><title>Galeria sprite'ów</title>
+<style>
+  body { background: #c4623a; margin: 0; padding: 12px; font: 14px sans-serif; color: #fff; }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 18px; }
+  canvas { image-rendering: pixelated; }
+  figure { margin: 0; text-align: center; }
+</style></head>
+<body>
+<div id="out"></div>
+<!-- Tool for checking art: zoomed and at game scale (x2). Open through a local server: /tools/gallery.html?units=a,b&objects=c,d&zoom=6 -->
+<script src="../src/rng.js"></script><script src="../src/data.js"></script><script src="../src/strings.js"></script>
+<script src="../src/pixel.js"></script><script src="../src/shading.js"></script><script src="../src/map.js"></script>
+<script src="../src/sprites.js"></script><script src="../src/units.js"></script><script src="../src/creatures.js"></script>
+<script src="../src/objects.js"></script>
+<script>
+  const CP = window.CP;
+  const q = new URLSearchParams(location.search);
+  const units = (q.get('units') || 'settler,infantry,rifleman,hero,cannon,maibawu,guardian,wormSmall,mabmia').split(',').filter(Boolean);
+  const objs = (q.get('objects') || 'forge,rocket,bigCrystal,workshop,lander').split(',').filter(Boolean);
+  const zoom = Number(q.get('zoom') || 6);
+  const out = document.getElementById('out');
+  function show(src, scale, label, row) {
+    const f = document.createElement('figure');
+    const c = document.createElement('canvas');
+    c.width = src.width * scale; c.height = src.height * scale;
+    const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height);
+    f.appendChild(c);
+    if (label) { const l = document.createElement('figcaption'); l.textContent = label; f.appendChild(l); }
+    row.appendChild(f);
+  }
+  const row = () => { const r = document.createElement('div'); r.className = 'row'; out.appendChild(r); return r; };
+  const r1 = row(); for (const u of units) show(CP.unitSprite(u, 0, false), zoom, u, r1);
+  const r2 = row(); for (const u of units) for (const f of [0, 1, 2, 3]) show(CP.unitSprite(u, f, false), 2, '', r2);
+  const r3 = row(); for (const o of objs) show(CP.objectSprite(o), Math.max(2, zoom / 2), o, r3);
+  const r4 = row(); for (const o of objs) show(CP.objectSprite(o), 2, '', r4);
+</script>
+</body></html>

@@ -22,6 +22,8 @@
       nests: [],
       debris: [], // emptied wrecks, drawn only
       res: { crystals: 0, scrap: 0 },
+      hero: { level: 1, xp: 0 }, // carried between missions
+      builds: CP.SETTLER_BUILDS, // what settlers may build in this mission
       gathered: { crystals: 0, scrap: 0 }, // totals over the mission, for goals
       fog: new Uint8Array(map.w * map.h),
       events: [], // for the renderer and the game loop: damage numbers, deaths, spotted enemies
@@ -46,9 +48,9 @@
     return b;
   }
 
-  function addNode(state, kind, x, y, amount) {
-    const n = { id: state.nextId++, kind, x, y, size: 2, amount, max: amount };
-    setBlocked(state.map, x, y, 2, 1);
+  function addNode(state, kind, x, y, amount, size = 2) {
+    const n = { id: state.nextId++, kind, x, y, size, amount, max: amount, guardId: null };
+    setBlocked(state.map, x, y, size, 1);
     state.nodes.push(n);
     return n;
   }
@@ -81,7 +83,13 @@
       home: { x, y },
       seen: false,
       followId: null, // Mabmia follows this settler once tamed
+      down: 0, // the hero: seconds until he stands up again
     };
+    if (type === 'hero') {
+      u.level = state.hero.level;
+      u.xp = state.hero.xp;
+      u.hearts = CP.maxHearts(u);
+    }
     state.units.push(u);
     return u;
   }
@@ -195,7 +203,7 @@
       u.px = u.x;
       u.py = u.y;
       if (u.lunge > 0) u.lunge -= dt;
-      if (!u.path.length) { u.walk = 0; continue; }
+      if (!u.path.length || u.down > 0) { u.walk = 0; continue; }
       let step = CP.UNIT_TYPES[u.type].speed * dt;
       while (step > 0 && u.path.length) {
         const wp = u.path[0];
@@ -226,10 +234,10 @@
     const us = state.units;
     for (let i = 0; i < us.length; i++) {
       const a = us[i];
-      if (a.hidden) continue;
+      if (a.hidden || a.down > 0) continue;
       for (let j = i + 1; j < us.length; j++) {
         const b = us[j];
-        if (b.hidden) continue;
+        if (b.hidden || b.down > 0) continue;
         const aIdle = !a.path.length, bIdle = !b.path.length;
         if (!aIdle && !bIdle) continue;
         let dx = b.x - a.x, dy = b.y - a.y;
@@ -272,7 +280,7 @@
           if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r) fog[y * map.w + x] = FOG.VISIBLE;
         }
     };
-    for (const u of state.units) if (u.owner === 'player') reveal(u.x, u.y, CP.UNIT_TYPES[u.type].sight + 0.5);
+    for (const u of state.units) if (u.owner === 'player' && !(u.down > 0)) reveal(u.x, u.y, CP.UNIT_TYPES[u.type].sight + 0.5);
     for (const b of state.buildings) reveal(b.x + b.size / 2, b.y + b.size / 2, CP.BUILDING_TYPES[b.type].sight + b.size / 2);
     for (const u of state.units) {
       if (u.owner === 'player' || u.seen) continue;
@@ -301,6 +309,7 @@
   function runOrders(state) {
     for (const u of state.units) {
       if (u.cd > 0) u.cd -= DT();
+      if (u.down > 0) continue;
       if (u.order) {
         const h = ORDERS[u.order.type];
         if (h) h(state, u);
@@ -311,6 +320,7 @@
 
   /** Orders the given units to walk to the point (wx, wy) in tiles. Works in pause too. */
   function orderMove(state, units, wx, wy) {
+    units = units.filter((u) => !(u.down > 0));
     if (!units.length) return;
     const tx = Math.floor(wx), ty = Math.floor(wy);
     const goals = goalTiles(state.map, tx, ty, units.length);
@@ -362,7 +372,7 @@
    * otherwise units walk there.
    */
   function orderSmart(state, ids, wx, wy, targetUnit) {
-    const units = ids.map((id) => unitById(state, id)).filter((u) => u && u.owner === 'player');
+    const units = ids.map((id) => unitById(state, id)).filter((u) => u && u.owner === 'player' && !(u.down > 0));
     if (!units.length) return null;
     // The click box of a sprite (from input) wins over the guess from a map point.
     const hit = targetUnit && targetUnit.owner !== 'player' ? { kind: 'unit', unit: targetUnit } : thingAt(state, wx, wy);

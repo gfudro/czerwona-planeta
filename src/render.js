@@ -75,6 +75,24 @@
     ctx.fillRect(Math.round(x - w / 2), Math.round(y), w * Math.max(0, Math.min(1, t)), h);
   }
 
+  /** Little gold stars over the hero: one per level. */
+  function drawStars(ctx, x, y, n) {
+    const star = CP.icon('star');
+    const w = 14;
+    for (let i = 0; i < n; i++) ctx.drawImage(star, Math.round(x - (n * w) / 2 + i * w), Math.round(y - 6), 14, 14);
+  }
+
+  function barWidth(type) {
+    const meta = CP.SPRITE_META[type];
+    return Math.max(36, Math.min(80, meta.hitW * 2 * S * 0.8));
+  }
+
+  function selRing(type) {
+    const meta = CP.SPRITE_META[type];
+    const rx = Math.max(22, meta.hitW * S * 1.1);
+    return [rx, rx * 0.38];
+  }
+
   function heartsColor(t) {
     return t > 0.5 ? '#4dd25a' : t > 0.25 ? '#f2c230' : '#e8402a';
   }
@@ -108,6 +126,17 @@
   function drawUnit(r, u, p) {
     const { ctx } = r;
     const meta = CP.SPRITE_META[u.type];
+    if (u.down > 0) {
+      // The fallen hero lies on the ground, see-through.
+      const spr = CP.unitSprite(u.type, 0, u.facing < 0);
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.translate(Math.round(p.x), Math.round(p.y - 8));
+      ctx.rotate(u.facing < 0 ? -Math.PI / 2 : Math.PI / 2);
+      ctx.drawImage(spr, -meta.footY * S * 0.5, -spr.width * S * 0.5, spr.width * S, spr.height * S);
+      ctx.restore();
+      return;
+    }
     const frame = unitFrame(u);
     const spr = CP.unitSprite(u.type, frame, u.facing < 0);
     let ox = 0, oy = frame === 1 && u.type !== 'mabmia' ? -S : 0;
@@ -133,6 +162,7 @@
     r.fx = r.fx.filter((f) => now - f.t < f.life);
     for (const f of r.fx) {
       const k = (now - f.t) / f.life;
+      if (k < 0) continue; // starts a little later (the cannonball's blast)
       const x = f.x * TP - cam.x, y = f.y * TP - cam.y;
       if (f.kind === 'text') {
         ctx.font = `800 ${f.size || 26}px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif`;
@@ -143,6 +173,22 @@
         ctx.strokeText(f.text, x, yy);
         ctx.fillStyle = f.color.replace('A', String(1 - k * k));
         ctx.fillText(f.text, x, yy);
+      } else if (f.kind === 'ball') {
+        // A cannonball flying in an arc, with a puff at the muzzle.
+        const x1 = f.x1 * TP - cam.x, y1 = f.y1 * TP - cam.y;
+        const bx = x + (x1 - x) * k, by = (y - 24) + (y1 - 16 - (y - 24)) * k - Math.sin(k * Math.PI) * 60;
+        ctx.fillStyle = 'rgba(40,30,30,1)';
+        ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(180,170,170,1)';
+        ctx.beginPath(); ctx.arc(bx - 2, by - 2, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(230,225,215,${0.7 * (1 - k)})`;
+        ctx.beginPath(); ctx.arc(x + 14, y - 30 - k * 20, 10 + k * 14, 0, Math.PI * 2); ctx.fill();
+      } else if (f.kind === 'boom') {
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          ctx.fillStyle = `rgba(255,${180 - i * 15},80,${1 - k})`;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * k * 26, y - 16 + Math.sin(a) * k * 14, 8 * (1 - k), 0, Math.PI * 2); ctx.fill();
+        }
       } else if (f.kind === 'shot') {
         const x1 = f.x1 * TP - cam.x, y1 = f.y1 * TP - cam.y;
         ctx.strokeStyle = `rgba(255,230,140,${1 - k})`;
@@ -243,8 +289,9 @@
       items.push({
         y: u.py + (u.y - u.py) * alpha,
         draw: () => {
-          if (sel.has(u.id)) ring(ctx, p.x, p.y - 4, u.type === 'wormBig' ? 40 : 22, u.type === 'wormBig' ? 13 : 9, '#4dff6a');
-          if (view.hover === u.id && u.owner === 'wild') ring(ctx, p.x, p.y - 4, u.type === 'wormBig' ? 40 : 22, u.type === 'wormBig' ? 13 : 9, '#ff4030');
+          const [rx, ry] = selRing(u.type);
+          if (sel.has(u.id)) ring(ctx, p.x, p.y - 4, rx, ry, '#4dff6a');
+          if (view.hover === u.id && u.owner === 'wild') ring(ctx, p.x, p.y - 4, rx, ry, '#ff4030');
           drawUnit(r, u, p);
         },
       });
@@ -255,11 +302,19 @@
     // Bars on top of all sprites: hearts, building progress, training, nest filling.
     for (const u of state.units) {
       if (u.hidden) continue;
-      const show = sel.has(u.id) || view.hover === u.id || (u.owner === 'wild' && u.hearts < CP.UNIT_TYPES[u.type].hearts);
+      const p0 = unitScreenPos(u, alpha, cam);
+      const top = p0.y - CP.SPRITE_META[u.type].footY * S - 12;
+      if (u.down > 0) {
+        // A fallen hero: how long until he stands up again.
+        bar(ctx, p0.x, p0.y - 30, 44, 1 - u.down / CP.HERO.downTime, '#5ac8ff', 6);
+        continue;
+      }
+      if (u.type === 'hero') drawStars(ctx, p0.x, top - 12, u.level);
+      const max = CP.maxHearts(u);
+      const show = sel.has(u.id) || view.hover === u.id || (u.owner === 'wild' && u.hearts < max) || (CP.UNIT_TYPES[u.type].boss && u.seen);
       if (!show || (u.owner !== 'player' && !CP.isVisible(state, u.x, u.y))) continue;
-      const p = unitScreenPos(u, alpha, cam);
-      const t = u.hearts / CP.UNIT_TYPES[u.type].hearts;
-      bar(ctx, p.x, p.y - CP.SPRITE_META[u.type].footY * S - 12, u.type === 'wormBig' ? 56 : 36, t, heartsColor(t));
+      const t = u.hearts / max;
+      bar(ctx, p0.x, top, barWidth(u.type), t, heartsColor(t), CP.UNIT_TYPES[u.type].boss ? 8 : 6);
     }
     for (const b of state.buildings) {
       const cx = (b.x + b.size / 2) * TP - cam.x, top = b.y * TP - cam.y - (CP.SPRITE_RISE[b.type] || 0) * S - 4;
@@ -303,8 +358,17 @@
     for (const e of state.events) {
       if (e.type === 'dmg') {
         r.fx.push({ kind: 'text', x: e.x + 0.15, y: e.y, t: now, life: 900, text: '−' + e.amount, color: e.owner === 'player' ? 'rgba(255,90,70,A)' : 'rgba(255,240,170,A)' });
+      } else if (e.type === 'shot' && e.heavy) {
+        r.fx.push({ kind: 'ball', x: e.x0, y: e.y0, x1: e.x1, y1: e.y1, t: now, life: 450 });
+        r.fx.push({ kind: 'boom', x: e.x1, y: e.y1, t: now + 450, life: 400 });
       } else if (e.type === 'shot') {
         r.fx.push({ kind: 'shot', x: e.x0, y: e.y0, x1: e.x1, y1: e.y1, t: now, life: 160 });
+      } else if (e.type === 'levelup') {
+        r.fx.push({ kind: 'text', x: e.x, y: e.y - 0.4, t: now, life: 2200, text: '★ ' + e.level, size: 40, color: 'rgba(255,220,80,A)' });
+      } else if (e.type === 'fell' || e.type === 'rose') {
+        r.fx.push({ kind: 'dust', x: e.x, y: e.y, t: now, life: 800 });
+      } else if (e.type === 'guarded') {
+        r.fx.push({ kind: 'text', x: e.x, y: e.y, t: now, life: 1400, text: '!', size: 44, color: 'rgba(255,80,60,A)' });
       } else if (e.type === 'death') {
         r.fx.push({ kind: 'dust', x: e.x, y: e.y, t: now, life: 700 });
       } else if (e.type === 'unload') {
