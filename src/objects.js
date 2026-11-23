@@ -10,7 +10,7 @@
   const M = () => CP.MAT;
 
   // How many art pixels each sprite rises above its footprint.
-  const RISE = { crystal: 26, wreck: 16, dome: 22, workshop: 34, lander: 40, nest: 6 };
+  const RISE = { crystal: 26, wreck: 18, dome: 22, workshop: 34, lander: 40, nest: 6 };
   CP.SPRITE_RISE = RISE;
 
   // ---- Lander --------------------------------------------------------------
@@ -314,6 +314,7 @@
 
   // ---- Wreck ---------------------------------------------------------------
 
+  /** A big rover wheel: dark tyre with tread blocks, lit steel hub with spokes. */
   function wheel(c, x, y, r) {
     const m = M();
     for (let yy = Math.floor(y - r); yy <= Math.ceil(y + r); yy++)
@@ -321,70 +322,86 @@
         const dx = xx + 0.5 - x, dy = yy + 0.5 - y, d = Math.hypot(dx, dy);
         if (d > r) continue;
         const a = Math.atan2(dy, dx);
-        const tread = d > r - 2 && Math.cos(a * 9) > 0.2;
-        const l = 0.3 + (-(dx / r) * 0.3 - (dy / r) * 0.35) + (tread ? 0.15 : 0);
-        c.px(xx, yy, CP.tone(m.iron, l, xx, yy));
+        let l;
+        if (d > r - 2.2) l = 0.28 + (Math.cos(a * 8) > 0.1 ? 0.18 : 0) - (dx / r) * 0.12 - (dy / r) * 0.15; // tyre with tread
+        else if (d > r * 0.45) l = 0.55 + (Math.cos(a * 5) > 0.6 ? 0.25 : 0) - (dx / r) * 0.15 - (dy / r) * 0.2; // spokes
+        else l = 0.75 - (dx / r) * 0.3 - (dy / r) * 0.3; // hub
+        c.px(xx, yy, CP.tone(d > r - 2.2 ? m.iron : m.steel, l, xx, yy));
       }
-    c.litBlob(x, y, r * 0.42, r * 0.42, m.steel);
+    c.px(Math.round(x - 1), Math.round(y - 1), 0xffffff);
   }
 
-  /** A rusty rover of the earlier expedition, half buried in sand (2×2 tiles). */
+  /**
+   * The rover of the earlier expedition: white paint with a blue stripe,
+   * blue solar wings, big wheels on rocker arms and a camera head on a
+   * mast. Rust in big patches, half buried, scrap lying around (2×2 tiles).
+   */
   function wreck() {
     const m = M();
     const c = PC(T * 2, T * 2 + RISE.wreck).origin(0, RISE.wreck);
-    const rustAt = (x, y, base) => {
-      const n = CP.hash(x >> 2, y >> 2, 31) * 0.6 + CP.hash(x, y, 32) * 0.4;
-      return n > 0.62 ? CP.tone(m.rust, base + 0.15, x, y) : n < 0.18 ? CP.tone(m.rust, base - 0.25, x, y) : null;
+    const PAINT = CP.ramp(0xc8ccd4, 7, 0.75, 0.35);
+    const BLUE = CP.ramp(0x3a6ab8, 6);
+    const CELLS = CP.ramp(0x2a3e8a, 5, 0.6, 0.6);
+    // Rust: big coherent patches, plus streaks running down.
+    const rusty = (x, y) => CP.hash(x >> 3, y >> 3, 41) * 0.65 + CP.hash(x >> 1, y >> 1, 42) * 0.35 > 0.66;
+    const face = (pts, l, seed) => {
+      const tmp = PC(c.w, c.h).origin(0, RISE.wreck).poly(pts, 0xffffff);
+      for (let y = 0; y < c.h; y++)
+        for (let x = 0; x < c.w; x++) {
+          if (tmp.data[(y * c.w + x) * 4 + 3] === 0) continue;
+          const r = rusty(x, y) || (CP.hash(x, 0, 43) > 0.9 && CP.hash(x, y >> 2, 44) > 0.4);
+          c.raw(x, y, CP.tone(r ? m.rust : PAINT, (r ? l - 0.05 : l) + (CP.hash(x, y, seed) - 0.5) * 0.08, x, y));
+        }
     };
-    // Mast with a dish (behind the body).
-    c.line(18, 12, 15, -6, m.steel[3]).line(19, 12, 16, -6, m.steel[1]);
-    c.line(15, -6, 10, -9, m.steel[3]);
-    c.litBlob(9, -10, 5, 3, m.steel);
-    c.glow(10, -13, 2, 2, 0xff5030, 180);
-    // Body box: top face, front face, side face.
-    const body = [
-      [[6, 22, 50, 22, 58, 12, 14, 12], 0.78],
-      [[6, 22, 50, 22, 50, 40, 6, 40], 0.52],
-      [[50, 22, 58, 12, 58, 30, 50, 40], 0.3],
-    ];
-    for (const [pts, l] of body) c.litPoly(pts, CP.ramp(0x8a6a58, 6), l, { grain: 0.12, seed: 11 });
-    // Rust patches over the paint.
-    for (let y = 12 + RISE.wreck; y < 40 + RISE.wreck; y++)
-      for (let x = 6; x < 58; x++) {
-        const cur = c.get(x, y);
-        if (cur < 0) continue;
-        const r = rustAt(x, y, 0.45);
-        if (r) c.raw(x, y, r);
-      }
-    // Panel seams and rivets on the front.
-    for (const x of [20, 35]) { c.vline(x, 23, 39, CP.MAT.iron[1]); c.vline(x + 1, 23, 39, CP.MAT.steel[4]); }
-    c.hline(7, 49, 23, CP.MAT.steel[5]);
-    for (let x = 9; x < 50; x += 6) c.rivet(x, 37, m.steel);
-    // Cracked solar panel on top.
-    c.litPoly([9, 20, 30, 20, 35, 14, 15, 14], CP.ramp(0x2a3a7a, 5), 0.55);
-    for (let k = 1; k < 4; k++) c.line(9 + k * 5.2, 20, 15 + k * 5, 14, 0x1a2450);
-    c.line(14, 17, 34, 17, 0x1a2450).line(18, 19, 24, 15, 0xc8d8ff).line(24, 15, 27, 18, 0xc8d8ff);
-    c.px(16, 15, 0xffffff).px(17, 15, 0xc8d8ff);
-    // Cabin box on the back right with a cracked window.
-    c.litPoly([36, 13, 52, 13, 57, 7, 41, 7], CP.ramp(0x8a8c94, 6), 0.8, { grain: 0.1, seed: 12 });
-    c.litPoly([36, 13, 52, 13, 52, 2, 36, 2].map((v, i) => (i % 2 ? v - 0 : v)), CP.ramp(0x8a8c94, 6), 0.55);
-    c.litPoly([36, 2, 52, 2, 57, -4, 41, -4], CP.ramp(0x8a8c94, 6), 0.85);
-    c.litPoly([52, 2, 57, -4, 57, 7, 52, 13], CP.ramp(0x8a8c94, 6), 0.32);
-    c.litRect(39, 4, 11, 6, CP.ramp(0x1e4a58, 5), 0.5);
-    c.line(41, 4, 44, 9, 0x9ad8d8).line(44, 9, 48, 5, 0x9ad8d8).px(40, 5, 0xffffff);
-    // Wheels along the front.
-    wheel(c, 12, 41, 6.5);
-    wheel(c, 28, 42, 6.5);
-    wheel(c, 44, 41, 6.5);
-    // A lost wheel lying in the sand.
-    c.litBlob(58, 49, 5, 2.5, m.iron);
-    c.litBlob(58, 48.5, 2, 1, m.steel);
-    // Sand drifts over the bottom right and left.
-    c.selOutline(0.6);
+
+    // Left solar wing, bent down, behind the body.
+    c.litPoly([2, 16, 16, 14, 18, 8, 4, 12], CELLS, 0.5);
+    for (let k = 0; k < 4; k++) c.line(4 + k * 3.5, 15.5 - k * 0.5, 6 + k * 3.5, 11 - k * 0.8, 0x18225a);
+    c.line(3, 14, 17, 11, 0x9ab0ff);
+    // Mast with the camera head: a box with two round lenses, like eyes.
+    c.litRect(37, -8, 3, 20, m.steel, 0.55);
+    c.vline(37, -8, 11, m.steel[5]);
+    c.litPoly([30, -10, 46, -10, 49, -14, 33, -14], PAINT, 0.85);
+    c.litRect(30, -10, 16, 8, PAINT, 0.6);
+    c.litPoly([46, -10, 49, -14, 49, -6, 46, -2], PAINT, 0.35);
+    c.litBlob(35, -6, 2.6, 2.6, CP.ramp(0x1a1e2a, 5)).px(34, -7, 0xffffff);
+    c.litBlob(41.5, -6, 2.6, 2.6, CP.ramp(0x1a1e2a, 5)).px(40.5, -7, 0xffffff);
+    // Body: top, front and side faces of a box.
+    face([6, 24, 50, 24, 57, 15, 13, 15], 0.82, 51);
+    face([6, 24, 50, 24, 50, 37, 6, 37], 0.56, 52);
+    face([50, 24, 57, 15, 57, 28, 50, 37], 0.3, 53);
+    // Blue stripe of the old expedition and an edge highlight.
+    c.litRect(6, 28, 44, 3, BLUE, 0.6);
+    c.litPoly([50, 28, 57, 19, 57, 21, 50, 31], BLUE, 0.3);
+    c.hline(6, 49, 24, PAINT[6]);
+    for (let x = 9; x < 50; x += 7) c.rivet(x, 34, m.steel);
+    // Top solar panel, cracked, catching the light.
+    c.litPoly([16, 22, 40, 22, 45, 17, 21, 17], CELLS, 0.55);
+    for (let k = 1; k < 5; k++) c.line(16 + k * 4.8, 22, 21 + k * 4.8, 17, 0x18225a);
+    c.line(19, 19.5, 43, 19.5, 0x18225a);
+    c.line(22, 21, 27, 18, 0xe0e8ff).line(27, 18, 30, 21, 0xe0e8ff);
+    c.px(23, 18, 0xffffff).px(24, 18, 0xc8d4ff);
+    // Rocker arms joining the wheels.
+    c.line(10, 40, 26, 36, m.iron[2]).line(10, 39, 26, 35, m.steel[4]);
+    c.line(26, 36, 44, 40, m.iron[2]).line(26, 35, 44, 39, m.steel[4]);
+    // Big wheels; the back one is missing.
+    wheel(c, 10, 42, 7);
+    wheel(c, 27, 43, 7);
+    c.litBlob(44, 41, 2.2, 2.2, m.steel); // broken axle stub
+    c.selOutline(0.62);
+    // Soft things after the outline: sand drift over the missing wheel, and the shadow.
     const dune = CP.ramp(0xc4623a, 6, 0.5, 0.4);
-    c.litBlob(50, 46, 15, 4.5, dune, { rough: 0.2, seed: 13, ambient: 0.45 });
-    c.litBlob(5, 45, 7, 3, dune, { rough: 0.2, seed: 14, ambient: 0.45 });
-    c.shadow(32, 50, 30, 6, 60);
+    c.shadow(34, 50, 30, 6, 70);
+    c.litBlob(48, 46, 14, 5, dune, { rough: 0.2, seed: 13, ambient: 0.45 });
+    // Scrap lying around: shiny plates and bolts, so it reads as a source of metal.
+    const scrap = PC(c.w, c.h).origin(0, RISE.wreck);
+    scrap.litPoly([50, 52, 58, 50, 60, 54, 52, 56], m.steel, 0.75, { seed: 3 });
+    scrap.litPoly([2, 50, 9, 48, 10, 52, 3, 54], m.steel, 0.6, { seed: 4 });
+    scrap.litPoly([38, 54, 44, 53, 44, 56, 38, 57], PAINT, 0.6, { seed: 5 });
+    scrap.px(52, 51, 0xffffff).px(4, 49, 0xffffff);
+    for (const [x, y] of [[16, 54], [30, 56], [47, 57]]) scrap.rivet(x, y, m.steel);
+    scrap.selOutline(0.55);
+    c.blit(scrap, 0, 0);
     return c;
   }
 
