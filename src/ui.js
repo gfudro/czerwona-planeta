@@ -205,7 +205,10 @@
     function selectionInfo(state) {
       const units = [...view.selected].map((id) => CP.unitById(state, id)).filter(Boolean);
       const b = view.selectedBuilding != null ? CP.buildingById(state, view.selectedBuilding) : null;
-      return { units, b };
+      const th = view.selectedThing;
+      const node = th && th.kind === 'node' ? CP.nodeById(state, th.id) : null;
+      const nest = th && th.kind === 'nest' ? CP.nestById(state, th.id) : null;
+      return { units, b, node, nest };
     }
 
     function card(pic, name, line) {
@@ -225,8 +228,20 @@
       return n;
     }
 
-    function buildSelection(state, { units, b }) {
+    function buildSelection(state, { units, b, node, nest }) {
       panel.innerHTML = '';
+      if (node) {
+        // How much is left: crystals in a deposit, scrap in a wreck.
+        const line = h('div', 'selNum');
+        line.appendChild(iconEl(CP.icon(node.kind === 'wreck' ? 'scrap' : 'crystal'), 'icon20'));
+        line.appendChild(document.createTextNode(` ${node.amount}/${node.max}`));
+        panel.appendChild(card(iconEl(CP.objectSprite(node.kind), 'bpic'), STR.things[node.kind], line));
+        return;
+      }
+      if (nest) {
+        panel.appendChild(card(iconEl(CP.objectSprite('nest'), 'bpic'), STR.things.nest, null));
+        return;
+      }
       if (b) {
         const pic = iconEl(CP.objectSprite(b.type), 'bpic');
         let line = null;
@@ -352,6 +367,7 @@
       const key = [
         sel.units.map((u) => u.id + ':' + u.hearts).join(','),
         b ? `${b.id}:${b.built}:${Math.floor(b.progress * 100)}:${b.queue.join('.')}` : '',
+        sel.node ? `n${sel.node.id}:${sel.node.amount}` : sel.nest ? `g${sel.nest.id}` : '',
         state.res.crystals, state.res.scrap, CP.popUsed(state), CP.popCap(state), view.placing ? view.placing.type : '',
       ].join('|');
       if (key !== lastKey) {

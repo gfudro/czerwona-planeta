@@ -50,6 +50,7 @@
       game.renderer = CP.createRenderer(canvas, state);
       view.selected = new Set();
       view.selectedBuilding = null;
+      view.selectedThing = null;
       view.placing = null;
       view.groups = {};
       acc = 0;

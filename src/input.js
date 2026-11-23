@@ -15,6 +15,7 @@
       bottomPad: 0, // map can scroll this far past its bottom edge (room for the HUD)
       selected: new Set(),
       selectedBuilding: null,
+      selectedThing: null, // { kind: 'node' | 'nest', id }: a deposit, wreck or nest, just to look at
       placing: null, // { type, builderId, tile } while choosing where to build
       hover: null,
       box: null,
@@ -88,6 +89,21 @@
     return null;
   }
 
+  /** A deposit, wreck or nest under a screen point (including the picture above it), if explored. */
+  function thingAtScreen(state, view, sx, sy) {
+    const t = screenToTile(view, sx, sy);
+    const explored = (x, y, size) => {
+      for (let yy = y; yy < y + size; yy++)
+        for (let xx = x; xx < x + size; xx++)
+          if (CP.inBounds(state.map, xx, yy) && state.fog[yy * state.map.w + xx] !== CP.FOG.HIDDEN) return true;
+      return false;
+    };
+    const hit = (x, y, size, rise) => t.x >= x && t.x < x + size && t.y >= y - rise / CP.ART_TILE && t.y < y + size && explored(x, y, size);
+    for (const n of state.nodes) if (hit(n.x, n.y, n.size, CP.SPRITE_RISE[n.kind] || 0)) return { kind: 'node', id: n.id };
+    for (const n of state.nests) if (hit(n.x, n.y, 1, CP.SPRITE_RISE.nest)) return { kind: 'nest', id: n.id };
+    return null;
+  }
+
   function screenToTile(view, sx, sy) {
     return { x: (sx + view.cam.x) / TP, y: (sy + view.cam.y) / TP };
   }
@@ -102,6 +118,7 @@
   function selectUnits(view, ids) {
     view.selected = new Set(ids);
     view.selectedBuilding = null;
+    view.selectedThing = null;
     view.placing = null;
   }
 
@@ -206,6 +223,7 @@
           const b = buildingAt(state, view, p.x, p.y);
           selectUnits(view, []);
           if (b) view.selectedBuilding = b.id;
+          else view.selectedThing = thingAtScreen(state, view, p.x, p.y);
         }
       }
       view.box = null;
@@ -284,6 +302,8 @@
       if (!s || s.hidden) view.selected.delete(id);
     }
     if (view.selectedBuilding != null && !CP.buildingById(state, view.selectedBuilding)) view.selectedBuilding = null;
+    const th = view.selectedThing;
+    if (th && !(th.kind === 'node' ? CP.nodeById(state, th.id) : CP.nestById(state, th.id))) view.selectedThing = null;
   }
 
   CP.createView = createView;

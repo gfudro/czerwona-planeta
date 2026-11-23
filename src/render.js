@@ -214,8 +214,16 @@
 
     // Everything standing, sorted by its bottom edge so nearer things overlap farther ones.
     const items = [];
-    for (const n of state.nodes) if (explored(state, n.x, n.y, n.size)) items.push({ y: n.y + n.size, draw: () => drawObject(ctx, n.kind, n.x, n.y, cam) });
-    for (const n of state.nests) if (explored(state, n.x, n.y, 1)) items.push({ y: n.y + 1, draw: () => drawObject(ctx, 'nest', n.x, n.y, cam) });
+    const th = view.selectedThing;
+    const thingRing = (x, y, size) => ring(ctx, (x + size / 2) * TP - cam.x, (y + size - 0.15) * TP - cam.y, size * TP * 0.55, size * TP * 0.2, '#f2e05a');
+    for (const n of state.nodes) if (explored(state, n.x, n.y, n.size)) items.push({ y: n.y + n.size, draw: () => {
+      if (th && th.kind === 'node' && th.id === n.id) thingRing(n.x, n.y, n.size);
+      drawObject(ctx, n.kind, n.x, n.y, cam);
+    } });
+    for (const n of state.nests) if (explored(state, n.x, n.y, 1)) items.push({ y: n.y + 1, draw: () => {
+      if (th && th.kind === 'nest' && th.id === n.id) thingRing(n.x, n.y, 1);
+      drawObject(ctx, 'nest', n.x, n.y, cam);
+    } });
     for (const b of state.buildings) {
       items.push({
         y: b.y + b.size,
