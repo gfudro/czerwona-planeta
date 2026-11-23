@@ -272,6 +272,8 @@
    */
   function updateFog(state) {
     const { fog, map } = state;
+    // In an intro the whole map is shown and nothing counts as spotted.
+    if (state.reveal) { fog.fill(FOG.VISIBLE); return; }
     for (let i = 0; i < fog.length; i++) if (fog[i] === FOG.VISIBLE) fog[i] = FOG.EXPLORED;
     const reveal = (cx, cy, r) => {
       for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)

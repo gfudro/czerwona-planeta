@@ -13,7 +13,7 @@
     let paused = true;
     let speed = 'normal';
     let autoPause = true;
-    let screen = 'menu'; // 'menu' | 'play' | 'end'
+    let screen = 'menu'; // 'menu' | 'intro' | 'play' | 'end'
     let endAt = 0;
 
     const view = CP.createView();
@@ -28,6 +28,8 @@
       setSpeed: (s) => { speed = s; },
       toggleAutoPause: () => { autoPause = !autoPause; },
       startMission,
+      briefMission: (id) => playIntro(id),
+      playStory: () => playIntro('game'),
       showMenu,
     };
 
@@ -62,6 +64,7 @@
     }
 
     function startMission(id) {
+      leaveIntro();
       load(CP.createMission(id));
       screen = 'play';
       paused = false;
@@ -69,16 +72,57 @@
     }
 
     function showMenu() {
+      if (intro.isActive()) intro.finish();
+      leaveIntro();
       screen = 'menu';
       paused = true;
       ui.showMenu();
     }
 
+    // ---- Intros: 'game' is the story, a number is that mission's briefing ----
+    const INTRO_KEY = 'czerwona-planeta-historia';
+    function storySeen() {
+      try { return localStorage.getItem(INTRO_KEY) === '1' || CP.loadProgress().won.length > 0; } catch (e) { return true; }
+    }
+
+    function leaveIntro() {
+      if (!document.body.classList.contains('intro')) return;
+      document.body.classList.remove('intro');
+      resize();
+    }
+
+    /** Shows an intro over its mission map with the fog lifted, then the mission (or the menu after the story). */
+    function playIntro(key) {
+      const def = CP.INTROS[key];
+      const missionId = key === 'game' ? def.mission : key;
+      const shots = key === 'game' ? def.shots : def;
+      document.body.classList.add('intro');
+      const state = CP.createMission(missionId);
+      state.reveal = true;
+      CP.updateFog(state);
+      load(state);
+      screen = 'intro';
+      paused = false;
+      ui.hideOverlay();
+      intro.play(shots, () => {
+        if (key !== 'game') { startMission(key); return; }
+        try { localStorage.setItem(INTRO_KEY, '1'); } catch (e) { /* not kept */ }
+        leaveIntro();
+        load(CP.createMission(1));
+        showMenu();
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (screen === 'intro' && intro.onKey(e)) e.stopImmediatePropagation();
+    }, true);
     window.addEventListener('resize', resize);
     document.addEventListener('fullscreenchange', resize);
     document.addEventListener('webkitfullscreenchange', resize);
     CP.attachInput(canvas, game);
     const ui = CP.createUI(game);
+    const intro = CP.createIntroPlayer(game);
+    game.intro = intro;
 
     // ?sandbox opens the stage-1 test map with 12 units; ?mission=2 jumps into a mission.
     if (params.has('sandbox')) {
@@ -90,13 +134,16 @@
       startMission(Number(params.get('mission')));
     } else {
       load(CP.createMission(1)); // something to show behind the menu
-      showMenu();
+      // First time here: a title card whose Start click lets the narrator speak.
+      if (storySeen()) showMenu();
+      else { screen = 'menu'; paused = true; ui.showTitle(); }
     }
 
     /** Reacts to what happened in the simulation: auto-pause, minimap pings, end of mission. */
     function handleEvents(now) {
       const state = game.state;
       CP.takeEvents(game.renderer, state, now);
+      if (screen === 'intro') { state.events.length = 0; return; }
       CP.sound.onEvents(state, view);
       for (const e of state.events) {
         if (e.type === 'spotted') {
@@ -128,9 +175,10 @@
       last = now;
       const t0 = performance.now();
       const state = game.state;
-      CP.updateCamera(view, state.map, dt);
+      if (screen === 'intro') intro.update(dt, now);
+      else CP.updateCamera(view, state.map, dt);
       // The world keeps running a moment after the end, then the end screen shows.
-      const running = (screen === 'play' && !paused) || (screen === 'end' && endAt > 0);
+      const running = (screen === 'play' && !paused) || screen === 'intro' || (screen === 'end' && endAt > 0);
       if (running) {
         acc += dt * CP.SPEEDS[speed];
         while (acc >= step) {

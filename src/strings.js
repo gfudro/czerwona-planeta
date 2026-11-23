@@ -21,6 +21,10 @@
     again: 'Jeszcze',
     mission: 'Misja',
     theEnd: 'Zwycięstwo!',
+    skip: 'Pomiń',
+    story: 'Historia',
+    narrator: 'Lektor',
+    start: 'Start',
     // Building upgrades: one word each.
     // What each upgrade does, shown under its name: as short as possible.
     upgradeText: {

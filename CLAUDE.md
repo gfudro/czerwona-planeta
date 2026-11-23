@@ -4,7 +4,7 @@ RTS w pikselowym stylu Warcrafta 2 dla sześcioletniego Artura: osadnicy na stea
 
 ## Zasady
 
-- Interfejs po polsku. Tekst bezszeryfową czcionką, minimum 18 px, napisy pojedynczymi słowami. Artur czyta wolno. Wyjątek: przy liczniku celu stoi opis z 2–3 krótkich słów (np. „Kop duże złoże”), Greg 23.11.2026.
+- Interfejs po polsku. Tekst bezszeryfową czcionką, minimum 18 px, napisy pojedynczymi słowami. Artur czyta wolno. Wyjątek: przy liczniku celu stoi opis z 2–3 krótkich słów (np. „Kop duże złoże”), Greg 23.11.2026. Drugi wyjątek: zdania w intro (najwyżej 9 słów), bo czyta je lektor.
 - Jedna strona HTML5 z canvasem, JavaScript, bez serwera. Postęp kampanii w localStorage. Gra ma działać po otwarciu w Chrome na laptopie (Safari Grega nie interesuje, 23.11.2026).
 - Pixel art tworzysz sam w kodzie. Wzorem dla stworów są karty w `reference/karty/`: obejrzyj właściwą kartę, zanim narysujesz stwora.
 - Serca, atak i obrona stworów są z kart i się nie zmieniają. Pozostałe liczby bierz z sekcji „Parametry startowe” w `DESIGN.md`; jeśli zmieniasz którąś przy strojeniu, zapisz zmianę w `DESIGN.md`.

@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const store = {};
 const ctx = { window: {}, console, Math, JSON, localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } } };
 vm.createContext(ctx);
-for (const f of ['rng', 'data', 'strings', 'pixel', 'map', 'path', 'sim', 'econ', 'combat', 'missions']) {
+for (const f of ['rng', 'data', 'strings', 'pixel', 'map', 'path', 'sim', 'econ', 'combat', 'missions', 'intro']) {
   vm.runInContext(fs.readFileSync(path.join(root, 'src', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
 }
 const CP = ctx.window.CP;
@@ -485,6 +485,30 @@ function allArrived(state) {
   q.shield = true;
   for (let i = 0; i < 5; i++) CP.damage(state, inf, q);
   check('a shielded boss takes no harm', q.hearts === before);
+}
+
+// ---- Intros: every shot looks at something that is really on its map ----
+{
+  store['czerwona-planeta-postep'] = JSON.stringify({ won: [1, 2, 3, 4, 5], hero: { level: 1, xp: 0 } });
+  for (const key of ['game', 1, 2, 3, 4, 5, 6]) {
+    const def = CP.INTROS[key];
+    const id = key === 'game' ? def.mission : key;
+    const shots = key === 'game' ? def.shots : def;
+    const s = CP.createMission(id);
+    s.reveal = true;
+    CP.updateFog(s);
+    const missing = shots.filter((sh) => sh.at && !(
+      s.buildings.some((o) => o.type === sh.at) || s.nodes.some((o) => o.kind === sh.at) ||
+      (sh.at === 'nest' && s.nests.length) || (sh.at === 'lava' && s.map.terrain.includes(CP.T.LAVA)) ||
+      s.units.some((o) => o.type === sh.at)));
+    check(`intro ${key}: every shot finds its target`, missing.length === 0, missing.map((m) => m.at).join(','));
+    check(`intro ${key}: sentences are short`, shots.every((sh) => sh.text && sh.text.split(' ').length <= 9));
+    // While the intro plays the world runs; nothing may end or get hurt, and the fog stays lifted.
+    const mine = s.units.filter((u) => u.owner === 'player').map((u) => u.hearts).join(',');
+    const ends = [];
+    for (let i = 0; i < 40 * CP.SIM_HZ; i++) { CP.tick(s); for (const e of s.events) if (e.type === 'win' || e.type === 'lose' || e.type === 'spotted') ends.push(e.type); s.events.length = 0; }
+    check(`intro ${key}: 40 s of intro world is calm`, !ends.length && s.units.filter((u) => u.owner === 'player').map((u) => u.hearts).join(',') === mine && s.fog.every((f) => f === CP.FOG.VISIBLE), ends.join(','));
+  }
 }
 
 console.log(failed ? `\n${failed} failed` : '\nall passed');

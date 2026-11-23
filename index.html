@@ -257,6 +257,48 @@
     pointer-events: none;
     z-index: 6;
   }
+  /* ---- Intros: the story and the mission briefings ---- */
+  body.intro #topbar, body.intro #bottomHud, body.intro #pauseBadge, body.intro #tip, body.intro #version { display: none !important; }
+  body.intro #game { top: 0; height: 100vh; }
+  #intro {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 12;
+    cursor: pointer;
+  }
+  .introSpace {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+  }
+  .introBox {
+    position: absolute;
+    left: 50%;
+    bottom: 32px;
+    transform: translateX(-50%);
+    min-width: 560px;
+    max-width: 90vw;
+    padding: 18px 28px 14px;
+    background: rgba(42, 20, 16, 0.92);
+    border: 4px solid var(--brass);
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    cursor: default;
+  }
+  .introCast { display: flex; gap: 28px; justify-content: center; align-items: flex-end; margin-bottom: 12px; }
+  .introCast canvas { image-rendering: pixelated; }
+  .introText { font-size: 34px; font-weight: 700; line-height: 1.25; color: var(--text); }
+  .introRow { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+  .introDots { flex: 1; display: flex; gap: 8px; }
+  .introDots span { width: 12px; height: 12px; border-radius: 50%; background: rgba(200, 154, 60, 0.35); }
+  .introDots span.on { background: var(--brass-light); }
+  .introSkip { opacity: 0.8; }
+  .titleBox h1 { font-size: 64px; margin-bottom: 28px; }
 </style>
 </head>
 <body>
@@ -284,30 +326,32 @@
   </div>
   <div id="tip"></div>
   <div id="overlay"></div>
+  <div id="intro"></div>
   <div id="version"></div>
   <div id="debug"></div>
 
   <!-- Plain scripts in order (ES modules don't load from file://). -->
-  <script src="src/rng.js?v=0.9.1"></script>
-  <script src="src/data.js?v=0.9.1"></script>
-  <script src="src/strings.js?v=0.9.1"></script>
-  <script src="src/pixel.js?v=0.9.1"></script>
-  <script src="src/shading.js?v=0.9.1"></script>
-  <script src="src/map.js?v=0.9.1"></script>
-  <script src="src/path.js?v=0.9.1"></script>
-  <script src="src/sim.js?v=0.9.1"></script>
-  <script src="src/econ.js?v=0.9.1"></script>
-  <script src="src/combat.js?v=0.9.1"></script>
-  <script src="src/missions.js?v=0.9.1"></script>
-  <script src="src/sprites.js?v=0.9.1"></script>
-  <script src="src/units.js?v=0.9.1"></script>
-  <script src="src/terrain.js?v=0.9.1"></script>
-  <script src="src/creatures.js?v=0.9.1"></script>
-  <script src="src/objects.js?v=0.9.1"></script>
-  <script src="src/render.js?v=0.9.1"></script>
-  <script src="src/input.js?v=0.9.1"></script>
-  <script src="src/ui.js?v=0.9.1"></script>
-  <script src="src/audio.js?v=0.9.1"></script>
-  <script src="src/main.js?v=0.9.1"></script>
+  <script src="src/rng.js?v=0.10.0"></script>
+  <script src="src/data.js?v=0.10.0"></script>
+  <script src="src/strings.js?v=0.10.0"></script>
+  <script src="src/pixel.js?v=0.10.0"></script>
+  <script src="src/shading.js?v=0.10.0"></script>
+  <script src="src/map.js?v=0.10.0"></script>
+  <script src="src/path.js?v=0.10.0"></script>
+  <script src="src/sim.js?v=0.10.0"></script>
+  <script src="src/econ.js?v=0.10.0"></script>
+  <script src="src/combat.js?v=0.10.0"></script>
+  <script src="src/missions.js?v=0.10.0"></script>
+  <script src="src/sprites.js?v=0.10.0"></script>
+  <script src="src/units.js?v=0.10.0"></script>
+  <script src="src/terrain.js?v=0.10.0"></script>
+  <script src="src/creatures.js?v=0.10.0"></script>
+  <script src="src/objects.js?v=0.10.0"></script>
+  <script src="src/render.js?v=0.10.0"></script>
+  <script src="src/input.js?v=0.10.0"></script>
+  <script src="src/intro.js?v=0.10.0"></script>
+  <script src="src/ui.js?v=0.10.0"></script>
+  <script src="src/audio.js?v=0.10.0"></script>
+  <script src="src/main.js?v=0.10.0"></script>
 </body>
 </html>

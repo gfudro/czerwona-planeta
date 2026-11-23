@@ -191,6 +191,7 @@ Kolejność prac:
    1. ✅ Bohater, działo z kuźnią, MAibawu i Strażnik, nowa grafika naszych jednostek w stylu cieniowanym (0.6.0).
    2. ✅ Misje 3 i 4 (0.6.0). Sprawdzone w Chrome.
    3. ✅ Misje 5 i 6 z Imapią i Władcą, ekran końca kampanii, menu na 6 misji (0.7.0). Sprawdzone w Chrome.
+   4. ✅ Intro gry i odprawa przed każdą misją (0.10.0). Greg 23.11.2026: „zrób intro do samej gry i do każdej misji”.
 6. Poprawki po teście z Arturem. ← tu jesteśmy (czekamy na test)
 
 ## Parametry startowe
@@ -325,6 +326,14 @@ Boss nie odnosi ran, dopóki w promieniu 12 kafli stoi ktoś z jego straży (ta 
 
 - Misje 3, 5 i 6: sama startowa armia nie wygrywa (sprawdzone też z bohaterem na 1. i 5. poziomie).
 - Bot, który zbiera, szkoli, kupuje ulepszenia (Miecze, Lufy, Lecznica, Kilofy) i atakuje po 4–5 minutach, wygrywa. W misjach 5 i 6 ostatkiem sił, bo bot walczy głupio: bez leczenia w Lecznicy, bez wyciągania stworów po kilka. Człowiek powinien wygrać pewniej. Jeśli będzie za trudno, najprościej zmniejszyć posiłki bossów.
+
+## Intro i odprawy (0.10.0)
+
+- **Historia gry:** przy pierwszym wejściu ekran z nazwą gry i przyciskiem „Start”. Potem 6 ujęć: rakieta w kosmosie, zbliżenie do Marsa, lądownik, stare wraki („Kto tu był przed nami?”), Mabmia, a na koniec groźne stwory w rzędzie. Po historii jest menu. Można ją obejrzeć jeszcze raz przyciskiem „Historia” w menu.
+- **Odprawa przed misją:** 3–4 ujęcia po kliknięciu misji w menu. Kamera przelatuje nad prawdziwą mapą misji bez mgły i pokazuje bazę, wroga i cel. Po przegranej przycisk „Jeszcze” zaczyna misję od razu, bez odprawy.
+- **Tekst i lektor:** każde ujęcie ma jedno krótkie zdanie (najwyżej 9 słów). Czyta je polski głos przeglądarki, w Chrome na Macu „Zosia”. Lektora wyłącza się przełącznikiem „Lektor” w menu. Bez lektora ujęcie trwa tyle, żeby dało się przeczytać zdanie.
+- **Sterowanie:** klik w obraz, „Dalej”, spacja albo Enter przechodzą do następnego ujęcia. „Pomiń” albo Esc kończą intro.
+- Zdania i ujęcia są w `CP.INTROS` w `src/intro.js`. Gdy Artur wymyśli imię bohatera, trzeba je wpisać w zdanie misji 3.
 
 ## Stan prac i ustalenia z budowy
 

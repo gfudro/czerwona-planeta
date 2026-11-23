@@ -458,18 +458,36 @@
         b.appendChild(h('div', 'mName', CP.MISSIONS[id].name));
         if (won) b.appendChild(iconEl(CP.icon('check'), 'icon32'));
         if (!open) b.appendChild(h('div', 'lock', '🔒'));
-        if (open) b.addEventListener('click', () => { enterFullscreen(); game.startMission(id); });
+        if (open) b.addEventListener('click', () => { enterFullscreen(); game.briefMission(id); });
         list.appendChild(b);
       }
       box.appendChild(list);
+      const story = h('button', 'storyBtn', STR.story);
+      story.addEventListener('click', () => { enterFullscreen(); game.playStory(); });
       // Sound and music switches live here, not in the top bar (no room on a laptop).
       const sound = h('div', 'soundRow');
-      for (const [label, isOn, set] of [[STR.sound, CP.sound.sfxOn, CP.sound.setSfx], [STR.music, CP.sound.musicOn, CP.sound.setMusic]]) {
+      sound.appendChild(story);
+      const switches = [[STR.sound, CP.sound.sfxOn, CP.sound.setSfx], [STR.music, CP.sound.musicOn, CP.sound.setMusic]];
+      if (window.speechSynthesis) switches.push([STR.narrator, CP.narrator.on, CP.narrator.set]);
+      for (const [label, isOn, set] of switches) {
         const b = h('button', isOn() ? 'on' : '', label);
         b.addEventListener('click', () => { set(!isOn()); b.classList.toggle('on', isOn()); });
         sound.appendChild(b);
       }
       box.appendChild(sound);
+      ov.appendChild(box);
+    }
+
+    /** First visit: just the name and a big Start button, which begins the story. */
+    function showTitle() {
+      const ov = el('overlay');
+      ov.innerHTML = '';
+      ov.style.display = 'flex';
+      const box = h('div', 'menuBox titleBox');
+      box.appendChild(h('h1', null, STR.title));
+      const b = h('button', 'big', STR.start + ' ▶');
+      b.addEventListener('click', () => { enterFullscreen(); game.playStory(); });
+      box.appendChild(b);
       ov.appendChild(box);
     }
 
@@ -519,7 +537,7 @@
       lastGoal = '';
     }
 
-    return { update, ping, showMenu, showEnd, hideOverlay, reset };
+    return { update, ping, showMenu, showTitle, showEnd, hideOverlay, reset };
   }
 
   CP.createUI = createUI;
