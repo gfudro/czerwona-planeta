@@ -83,6 +83,89 @@
       }
   }
 
+  /**
+   * The queen's palace in (x0, y0)–(x1, y1): an outer wall with three gates
+   * and fallen stretches, two rows of pillars leading to the throne hall,
+   * and an inner wall around the hall with a wide doorway.
+   */
+  function addPalace(map, x0, y0, x1, y1) {
+    const set = (x, y) => { if (x > 0 && y > 0 && x < map.w - 1 && y < map.h - 1) map.terrain[y * map.w + x] = CP.T.RUIN; };
+    const gap = (t, list) => list.some(([a, b]) => t >= a && t <= b);
+    for (let x = x0; x <= x1; x++) {
+      if (!gap(x, [[x0 + 5, x0 + 6]])) set(x, y0 + 1);
+      if (!gap(x, [[x0 + 4, x0 + 6], [x1 - 6, x1 - 4]])) set(x, y1);
+    }
+    for (let y = y0 + 1; y <= y1; y++) {
+      if (!gap(y, [[y0 + 7, y0 + 9], [y1 - 3, y1 - 3]])) set(x0, y);
+    }
+    // Pillars along the way in.
+    for (let x = x0 + 3; x <= x1 - 8; x += 3) { set(x, y1 - 4); set(x, y1 - 8); }
+    // Inner wall around the throne hall (top-right), doorway on the left and bottom.
+    const hx = x1 - 9, hy = y0 + 1, hb = y0 + 11;
+    for (let y = hy; y <= hb; y++) if (!gap(y, [[hy + 4, hy + 6]])) set(hx, y);
+    for (let x = hx; x <= x1; x++) if (!gap(x, [[hx + 3, hx + 5]])) set(x, hb);
+  }
+
+  /** Distance from (px, py) to the segment a–b. */
+  function segDist(px, py, a, b) {
+    const vx = b.x - a.x, vy = b.y - a.y, len2 = vx * vx + vy * vy || 1;
+    const t = Math.max(0, Math.min(1, ((px - a.x) * vx + (py - a.y) * vy) / len2));
+    return Math.hypot(px - a.x - vx * t, py - a.y - vy * t);
+  }
+
+  /**
+   * Caves under the surface: solid rock with round caverns joined by winding
+   * tunnels, darker patches of floor, and lava pools at the sides of some
+   * caverns, never on a tunnel (so lava doesn't block the way).
+   */
+  function caveMap(seed, W, caverns, tunnels, lavaIn) {
+    const map = CP.createMap(W, H);
+    map.theme = 'cave';
+    map.terrain.fill(CP.T.ROCK);
+    const rng = CP.createRng(seed);
+    const inside = (x, y) => x > 0 && y > 0 && x < W - 1 && y < H - 1;
+    const carve = (cx, cy, r, t = CP.T.SAND) => {
+      for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++)
+        for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) {
+          if (!inside(x, y)) continue;
+          const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) + (CP.hash(x, y, seed & 255) - 0.5) * 1.4;
+          if (d <= r) map.terrain[y * W + x] = t;
+        }
+    };
+    for (const c of caverns) carve(c.x, c.y, c.r);
+    const segs = [];
+    for (const [i, j] of tunnels) {
+      const a = caverns[i], b = caverns[j];
+      // A wobbly tunnel: walk from a to b with a sideways sway.
+      const len = Math.hypot(b.x - a.x, b.y - a.y), nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len;
+      const sway = (CP.nextFloat(rng) - 0.5) * 6;
+      let prev = { x: a.x, y: a.y };
+      for (let t = 0; t <= 1.0001; t += 0.5 / len) {
+        const s = Math.sin(t * Math.PI) * sway;
+        const p = { x: a.x + (b.x - a.x) * t + nx * s, y: a.y + (b.y - a.y) * t + ny * s };
+        carve(p.x, p.y, 1.7 + Math.sin(t * 9 + i) * 0.3);
+        segs.push([prev, p]);
+        prev = p;
+      }
+    }
+    // Lava pools inside the listed caverns, away from tunnels and kept spots.
+    for (const { cavern, count, keep } of lavaIn) {
+      const c = caverns[cavern];
+      let placed = 0;
+      for (let tries = 0; tries < 60 && placed < count; tries++) {
+        const ang = CP.nextFloat(rng) * Math.PI * 2, d = c.r * (0.35 + CP.nextFloat(rng) * 0.4);
+        const px = c.x + Math.cos(ang) * d, py = c.y + Math.sin(ang) * d, pr = 1.4 + CP.nextFloat(rng) * 1.2;
+        if (segs.some(([a, b]) => segDist(px, py, a, b) < pr + 2.2)) continue;
+        if ((keep || []).some((k) => Math.hypot(px - k.x, py - k.y) < pr + k.r)) continue;
+        for (let y = Math.floor(py - pr); y <= py + pr; y++)
+          for (let x = Math.floor(px - pr); x <= px + pr; x++)
+            if (inside(x, y) && map.terrain[y * W + x] < CP.T.ROCK && Math.hypot(x + 0.5 - px, y + 0.5 - py) <= pr) map.terrain[y * W + x] = CP.T.LAVA;
+        placed++;
+      }
+    }
+    return map;
+  }
+
   /** Patrols of MAibawu: `count` warriors walking the same route in a little clump. */
   function addPatrol(state, route, count, group) {
     const offs = [{ x: 0, y: 0 }, { x: 1, y: 0.6 }, { x: -0.6, y: 1 }];
@@ -143,6 +226,26 @@
   /** Any of our units standing within `r` tiles of a footprint. */
   function reached(state, o, r = 1.6) {
     return state.units.some((u) => u.owner === 'player' && !(u.down > 0) && CP.distToRect(u.x, u.y, o.x, o.y, o.size) <= r);
+  }
+
+  /**
+   * Extra starting buildings on free ground near the lander, keeping a
+   * one-tile walkway around each (placed after deposits so they don't overlap).
+   */
+  function startBuildings(state, types) {
+    const map = state.map;
+    for (const type of types) {
+      const size = CP.BUILDING_TYPES[type].size;
+      let done = false;
+      for (let r = 4; r <= 12 && !done; r++)
+        for (let y = LANDER.y - r; y <= LANDER.y + 2 && !done; y++)
+          for (let x = LANDER.x; x <= LANDER.x + r && !done; x++) {
+            let ok = true;
+            for (let yy = y - 1; yy <= y + size && ok; yy++)
+              for (let xx = x - 1; xx <= x + size && ok; xx++) ok = CP.walkable(map, xx, yy);
+            if (ok) { CP.addBuilding(state, type, x, y); done = true; }
+          }
+    }
   }
 
   function startUnits(state, list) {
@@ -337,8 +440,121 @@
       ],
     },
   };
+  MISSIONS[5] = {
+    id: 5,
+    name: 'Królowa',
+    build(seed) {
+      const MW = 64;
+      const throne = { x: 56, y: 7 };
+      const deposit = at(6.5, Math.PI * 0.42);
+      const wreck = at(7.5, Math.PI * 0.08);
+      const wreck2 = { x: 28, y: 38 };
+      const deposit2 = { x: 30, y: 20 };
+      const routes = [
+        [{ x: 20.5, y: 30.5 }, { x: 30.5, y: 28.5 }, { x: 26.5, y: 22.5 }],
+        [{ x: 40.5, y: 26.5 }, { x: 46.5, y: 18.5 }, { x: 38.5, y: 16.5 }],
+      ];
+      const keep = [
+        { x: BASE.x + 3, y: BASE.y - 1, r: 7 },
+        { x: deposit.x + 1, y: deposit.y + 1, r: 2.5 },
+        { x: deposit2.x + 1, y: deposit2.y + 1, r: 2.5 },
+        { x: wreck.x + 1, y: wreck.y + 1, r: 2.5 },
+        { x: wreck2.x + 1, y: wreck2.y + 1, r: 2.5 },
+        { x: throne.x, y: throne.y, r: 4 },
+        ...routes.flat().map((p) => ({ x: p.x, y: p.y, r: 1.6 })),
+      ];
+      const map = wildMap(seed, keep, MW, { dunes: 20, rocks: 24, cracks: 3 });
+      // The palace: tighter walled halls in the top-right corner, a few
+      // scattered ruins on the way.
+      clearArea(map, 41, 1, 22, 22);
+      addPalace(map, 44, 2, 61, 18);
+      addRuins(map, seed + 5, 22, 10, 37, 25, keep, 8);
+      clearArea(map, LANDER.x - 1, LANDER.y - 5, 12, 10);
+      connect(map, [deposit, deposit2, wreck, wreck2, { x: throne.x, y: throne.y + 2 }, ...routes.flat().map((p) => ({ x: Math.floor(p.x), y: Math.floor(p.y) }))]);
+      sealFromBase(map);
+      const state = CP.createState(map, seed);
+      state.hero = loadProgress().hero;
+      state.builds = ['dome', 'workshop', 'forge'];
+      CP.addBuilding(state, 'lander', LANDER.x, LANDER.y);
+      CP.addBuilding(state, 'dome', LANDER.x + 4, LANDER.y + 1);
+      CP.addBuilding(state, 'workshop', LANDER.x, LANDER.y - 4);
+      CP.addNode(state, 'crystal', deposit.x, deposit.y, CP.ECON.smallDeposit);
+      CP.addNode(state, 'crystal', deposit2.x, deposit2.y, CP.ECON.smallDeposit);
+      CP.addNode(state, 'wreck', wreck.x, wreck.y, CP.ECON.wreck);
+      CP.addNode(state, 'wreck', wreck2.x, wreck2.y, CP.ECON.wreck);
+      startBuildings(state, ['forge', 'dome']);
+      routes.forEach((r, i) => addPatrol(state, r, i + 1, i));
+      // The queen with two MAibawu at her side; they fight together.
+      const q = addCreature(state, 'imapia', throne.x, throne.y);
+      q.group = 'queen';
+      addPatrol(state, [{ x: throne.x - 1.5, y: throne.y + 2.5 }], 2, 'queen');
+      state.bossId = q.id;
+      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman', 'rifleman', 'cannon']);
+      state.res = { crystals: 200, scrap: 200 };
+      return state;
+    },
+    goals: [{ icon: 'imapia', target: 1, count: (s) => (CP.unitById(s, s.bossId) ? 0 : 1) }],
+  };
+
+  MISSIONS[6] = {
+    id: 6,
+    name: 'Jaskinie',
+    build(seed) {
+      const MW = 64;
+      const caverns = [
+        { x: 8, y: 40, r: 8 },   // 0 base
+        { x: 22, y: 39, r: 5.5 }, // 1 wreck
+        { x: 19, y: 24, r: 6 },  // 2 first Guardian
+        { x: 34, y: 31, r: 6.5 }, // 3 nest, halfway
+        { x: 50, y: 40, r: 6 },  // 4 second Guardian
+        { x: 40, y: 15, r: 6 },  // 5 lava hall
+        { x: 54, y: 9, r: 7.5 },  // 6 the Lord's grotto
+      ];
+      const tunnels = [[0, 1], [1, 2], [1, 3], [3, 4], [3, 5], [2, 5], [5, 6], [4, 6]];
+      const deposit = at(6, Math.PI * 0.4);
+      const wreck = { x: 22, y: 40 };
+      const big1 = { x: 16, y: 21 }, guard1 = { x: 19, y: 25 };
+      const big2 = { x: 51, y: 40 }, guard2 = { x: 49, y: 38 };
+      const nest = { x: 34, y: 31 };
+      const lord = { x: 55, y: 9 };
+      const keepObj = [
+        { x: deposit.x + 1, y: deposit.y + 1, r: 2.5 }, { x: wreck.x + 1, y: wreck.y + 1, r: 2.5 },
+        { x: big1.x + 1.5, y: big1.y + 1.5, r: 3.5 }, { x: big2.x + 1.5, y: big2.y + 1.5, r: 3.5 },
+        { x: nest.x, y: nest.y, r: 2.5 }, { x: lord.x, y: lord.y, r: 3 },
+      ];
+      const lavaIn = [
+        { cavern: 3, count: 1, keep: keepObj }, { cavern: 4, count: 1, keep: keepObj },
+        { cavern: 5, count: 3, keep: keepObj }, { cavern: 6, count: 2, keep: keepObj },
+      ];
+      const map = caveMap(seed, MW, caverns, tunnels, lavaIn);
+      clearArea(map, LANDER.x - 1, LANDER.y - 5, 12, 10);
+      for (const k of keepObj) clearArea(map, Math.floor(k.x - 1.5), Math.floor(k.y - 1.5), 3, 3);
+      connect(map, [deposit, wreck, guard1, guard2, nest, lord]);
+      sealFromBase(map);
+      const state = CP.createState(map, seed);
+      state.hero = loadProgress().hero;
+      state.builds = ['dome', 'workshop', 'forge'];
+      CP.addBuilding(state, 'lander', LANDER.x, LANDER.y);
+      CP.addBuilding(state, 'dome', LANDER.x + 4, LANDER.y + 1);
+      CP.addBuilding(state, 'workshop', LANDER.x, LANDER.y - 4);
+      CP.addNode(state, 'crystal', deposit.x, deposit.y, CP.ECON.smallDeposit);
+      CP.addNode(state, 'wreck', wreck.x, wreck.y, CP.ECON.wreck);
+      for (const [b, g] of [[big1, guard1], [big2, guard2]]) {
+        const node = CP.addNode(state, 'bigCrystal', b.x, b.y, CP.ECON.bigDeposit, 3);
+        node.guardId = addCreature(state, 'guardian', g.x, g.y).id;
+      }
+      startBuildings(state, ['forge', 'dome']);
+      CP.addNest(state, nest.x, nest.y, { firstSpawn: 90, interval: 45 });
+      state.bossId = addCreature(state, 'crystalLord', lord.x, lord.y).id;
+      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman', 'rifleman', 'cannon']);
+      state.res = { crystals: 250, scrap: 250 };
+      return state;
+    },
+    goals: [{ icon: 'crystalLord', target: 1, count: (s) => (CP.unitById(s, s.bossId) ? 0 : 1) }],
+  };
+
   CP.MISSIONS = MISSIONS;
-  CP.MISSION_COUNT = 4;
+  CP.MISSION_COUNT = 6;
 
   function createMission(id, seed) {
     const def = MISSIONS[id];

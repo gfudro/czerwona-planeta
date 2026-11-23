@@ -200,12 +200,142 @@
     return c;
   }
 
+  /**
+   * Imapia Wielka (imapia-wielka.jpg): a tall, slender queen in crimson
+   * armour, a turquoise pointed helmet with one red eye, tattered grey
+   * wings behind her, long mechanical legs with talons and clawed hands.
+   */
+  function imapia(frame) {
+    const m = CP.MAT, r = cramps();
+    if (!CR.crimson) {
+      CR.crimson = CP.ramp(0xc03a5a, 7, 0.75, 0.45);
+      CR.wing = CP.ramp(0x6a5048, 6, 0.8, 0.5);
+      CR.metal = CP.ramp(0x7a7a84, 6, 0.75, 0.5);
+    }
+    const c = PC(36, 50);
+    const a = frame === 1 ? -1 : frame === 2 ? 1 : 0;
+    // Tattered wings behind the body: a membrane spread from each shoulder,
+    // with dark spars, a ragged bottom edge and holes.
+    for (const dir of [-1, 1]) {
+      const sx = dir < 0 ? 14 : 21;
+      for (let dx = 1; dx <= 14; dx++) {
+        const x = sx + dir * dx;
+        const top = 13 + Math.round(dx * 0.35);
+        const bottom = 36 - Math.round(dx * 0.7) + Math.round((CP.hash(dx, dir, 61) - 0.5) * 6) - (dx % 3 === 0 ? 3 : 0);
+        for (let y = top; y <= bottom; y++) {
+          if (y > top + 4 && CP.hash(x, y >> 1, 62) < 0.1) continue;
+          const l = 0.22 + (1 - (y - top) / 24) * 0.25 + (dir > 0 ? -0.06 : 0.04) + (CP.hash(x, y, 63) - 0.5) * 0.1;
+          c.px(x, y, CP.tone(CR.wing, l, x, y));
+        }
+      }
+      // Spars: from the shoulder out and down.
+      for (const [ex, ey] of [[14, 18], [11, 28], [6, 33]]) c.line(sx, 14, sx + dir * ex, ey, CR.metal[dir < 0 ? 3 : 1]);
+    }
+    // Long mechanical legs: crimson thighs, grey shins, big talons.
+    for (const [hx, d, back] of [[15, a, true], [20, -a, false]]) {
+      const kx = hx + (back ? -1 : 1) + d, ky = 35, fx = hx + (back ? -2 : 1) + d * 2;
+      c.line(hx, 28, kx, ky, CR.crimson[back ? 1 : 3]).line(hx + 1, 28, kx + 1, ky, CR.crimson[back ? 0 : 2]);
+      c.line(kx, ky, fx, 46, CR.metal[back ? 1 : 3]).line(kx + 1, ky, fx + 1, 46, CR.metal[back ? 0 : 2]);
+      c.litBlob(kx + 0.5, ky, 1.4, 1.4, CR.metal);
+      c.hline(fx - 2, fx + 3, 47, r.claw[back ? 1 : 3]);
+      c.px(fx + 4, 46, r.claw[4]).px(fx - 3, 46, r.claw[2]).px(fx + 1, 48, r.claw[1]);
+    }
+    // Crimson armoured body with muscle plates and a green-wired waist.
+    c.litBlob(17.5, 22, 4.6, 7, CR.crimson);
+    c.hline(15, 20, 20, CR.crimson[2]).hline(15, 20, 24, CR.crimson[2]).vline(17, 17, 27, CR.crimson[2]);
+    c.litRect(15, 27, 6, 3, CR.metal, 0.45);
+    c.px(16, 28, 0x50d070).px(19, 28, 0xe0c040);
+    // Arms: crimson shoulders, metal forearms, long claws.
+    c.litBlob(13, 17, 2.4, 2.2, CR.crimson);
+    c.line(12, 18, 9, 27, CR.crimson[1]).line(9, 27, 8, 33, CR.metal[2]);
+    c.line(7, 34, 6, 37, r.claw[3]).line(8, 34, 8, 38, r.claw[3]).line(9, 34, 10, 37, r.claw[2]);
+    c.litBlob(22, 17, 2.4, 2.2, CR.crimson);
+    c.line(23, 18, 26, 26, CR.crimson[3]).line(24, 18, 27, 26, CR.crimson[2]);
+    c.line(26, 27, 27, 32, CR.metal[3]).line(27, 27, 28, 32, CR.metal[2]);
+    c.line(27, 33, 26, 37, r.claw[4]).line(28, 33, 29, 37, r.claw[3]).line(29, 33, 31, 35, r.claw[3]);
+    // Neck and the tall pointed turquoise helmet with a red eye.
+    c.litRect(16, 13, 3, 3, CR.metal, 0.4);
+    c.litBlob(18, 8, 4.4, 6.2, r.teal);
+    c.litBlob(17.5, 3.5, 2.6, 2.8, r.teal);
+    c.vline(18, 2, 13, r.teal[2]);
+    c.hline(16, 21, 10, 0x1a0c10).hline(17, 21, 11, 0x1a0c10).hline(18, 20, 12, 0x1a0c10);
+    c.px(19, 10, 0xff3020).px(20, 10, 0xff9070).px(19, 11, 0xc01818);
+    c.selOutline(0.7);
+    c.shadow(17, 47.5, 10, 2, 80);
+    c.glow(19.5, 10.5, 3, 2.4, 0xff3020, 140, true);
+    return c;
+  }
+
+  /**
+   * Władca Kryształów (wladca-krysztalow.jpg): a huge violet crystal giant
+   * in brass armour, a crown of crystal spikes over a pale fanged skull, a
+   * round brass chest with a pink heart, and thick crystal legs.
+   */
+  function crystalLord(frame) {
+    const m = CP.MAT, r = cramps();
+    if (!CR.bone) { CR.bone = CP.ramp(0xb898c0, 6, 0.75, 0.35); CR.deep = CP.ramp(0x7a4ac0, 7, 0.75, 0.45); }
+    const c = PC(48, 54);
+    const a = frame === 1 ? -1 : frame === 2 ? 1 : 0;
+    // Thick crystal legs with brass knee plates, wide apart.
+    for (const [x, d] of [[15, a], [30, -a]]) {
+      c.litRect(x - 3 + d, 36, 7, 14, r.crystal, 0.4);
+      spike(c, x - 2 + d, 50, 6, 2, -0.2, r.crystal2);
+      spike(c, x + 3 + d, 49, 5, 1.6, 0.25, r.crystal);
+      c.litBlob(x + 0.5 + d, 40, 3.6, 2.6, m.brass);
+      c.rivet(x + d, 40, m.brass);
+      c.hline(x - 4 + d, x + 5 + d, 51, r.crystal[0]);
+    }
+    // Crystal growths on the back and shoulders, behind the body.
+    const back = [[7, 26, 12, 2.4, -0.35, r.crystal], [11, 22, 14, 2.6, -0.2, r.crystal2], [37, 22, 14, 2.6, 0.2, r.crystal], [41, 26, 12, 2.4, 0.35, r.crystal2]];
+    for (const [x, b, h, w, lean, rp] of back) spike(c, x, b, h, w, lean, rp);
+    // Body: a crystal torso inside brass armour, a belt with a big crystal buckle.
+    c.litBlob(24, 28, 11, 10, CR.deep);
+    for (const [x, y] of [[17, 25], [30, 30], [20, 31], [29, 23]]) c.px(x, y, r.crystal2[5]).px(x + 1, y + 1, r.crystal2[3]);
+    c.litRect(16, 33, 17, 4, m.brass, 0.45);
+    spike(c, 24, 38, 5, 2.2, 0, r.crystal2);
+    // Shoulder pauldrons of brass.
+    c.litBlob(12, 21, 4.4, 3.4, m.brass);
+    c.litBlob(36, 21, 4.4, 3.4, m.brass);
+    c.rivet(12, 20, m.brass).rivet(36, 20, m.brass);
+    // Arms of crystal with brass cuffs and heavy fists.
+    c.litRect(7, 23, 5, 11, r.crystal, 0.35);
+    c.litRect(37, 23, 5, 11, r.crystal, 0.55);
+    c.litRect(6, 32, 7, 3, m.brass, 0.4).litRect(36, 32, 7, 3, m.brass, 0.5);
+    c.litBlob(9, 37, 3.4, 3, r.crystal2);
+    c.litBlob(39.5, 37, 3.4, 3, r.crystal2);
+    // Round brass chest piece with a pink heart.
+    c.litBlob(24, 27, 5, 5, m.brass);
+    c.litBlob(24, 27, 3.4, 3.4, CP.ramp(0x3a4a6a, 6, 0.7, 0.4));
+    c.px(23, 26, 0xff70b0).px(25, 26, 0xff70b0).hline(23, 25, 27, 0xff3a90).px(24, 28, 0xd01a70);
+    // Skull: mauve bone, dark eye sockets with pink glowing eyes, a wide jaw of fangs.
+    c.litBlob(24, 14, 4.8, 5, CR.bone);
+    c.litBlob(24, 18.5, 4.4, 2, CR.bone);
+    c.hline(20, 22, 13, 0x2a0c1a).hline(26, 28, 13, 0x2a0c1a).hline(21, 22, 14, 0x2a0c1a).hline(26, 27, 14, 0x2a0c1a);
+    c.px(21, 13, 0xff60d0).px(27, 13, 0xff60d0);
+    c.hline(20, 28, 18, 0x2a0c1a).hline(21, 27, 19, 0x2a0c1a);
+    for (let x = 20; x <= 28; x += 2) c.px(x, 17, CR.bone[5]).px(x, 18, CR.bone[4]);
+    for (let x = 21; x <= 27; x += 2) c.px(x, 19, CR.bone[4]);
+    c.px(24, 10, 0x60c0ff).px(24, 9, 0xffffff);
+    // Brass crown band and a crown of crystal spikes.
+    c.litRect(18, 8, 13, 2, m.brass, 0.5);
+    const crown = [[16, 9, 6, 1.4, -0.4], [19, 8, 9, 1.8, -0.2], [22, 8, 12, 2, -0.06], [26, 8, 12, 2, 0.06], [29, 8, 9, 1.8, 0.2], [32, 9, 6, 1.4, 0.4]];
+    crown.forEach(([x, b, h, w, lean], i) => spike(c, x, b, h, w, lean, i & 1 ? r.crystal2 : r.crystal));
+    c.selOutline(0.7);
+    c.shadow(23, 51.5, 17, 2.6, 80);
+    c.glow(24, 27, 4, 4, 0xff4aa0, 90, true);
+    c.glow(21, 13, 2, 1.6, 0xff60d0, 120, true);
+    c.glow(27, 13, 2, 1.6, 0xff60d0, 120, true);
+    return c;
+  }
+
   CP.CREATURE_PAINT = {
     mabmia: (f) => mabmia(f),
     wormSmall: (f) => worm(false, f),
     wormBig: (f) => worm(true, f),
     maibawu,
     guardian,
+    imapia,
+    crystalLord,
   };
 
   // Where each sprite stands: footX/footY is the art pixel at the feet.
@@ -216,5 +346,7 @@
     wormBig: { footX: 25, footY: 33, hitW: 22, hitH: 30 },
     maibawu: { footX: 11, footY: 32, hitW: 8, hitH: 31 },
     guardian: { footX: 20, footY: 27, hitW: 18, hitH: 25 },
+    imapia: { footX: 17, footY: 47, hitW: 10, hitH: 45 },
+    crystalLord: { footX: 23, footY: 51, hitW: 16, hitH: 48 },
   });
 })(window.CP = window.CP || {});

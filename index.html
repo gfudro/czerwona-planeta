@@ -201,7 +201,9 @@
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
   }
   .menuBox h1 { font-size: 48px; margin: 0 0 24px; color: var(--brass-light); letter-spacing: 1px; }
-  .missions { display: flex; gap: 20px; justify-content: center; }
+  .missions { display: grid; grid-template-columns: repeat(3, 200px); gap: 16px 20px; justify-content: center; }
+  .endArt { display: flex; gap: 28px; justify-content: center; align-items: flex-end; margin: 0 0 24px; }
+  .endArt canvas { image-rendering: pixelated; }
   button.mission {
     position: relative;
     width: 200px;
@@ -280,25 +282,25 @@
   <div id="debug"></div>
 
   <!-- Plain scripts in order (ES modules don't load from file://). -->
-  <script src="src/rng.js"></script>
-  <script src="src/data.js"></script>
-  <script src="src/strings.js"></script>
-  <script src="src/pixel.js"></script>
-  <script src="src/shading.js"></script>
-  <script src="src/map.js"></script>
-  <script src="src/path.js"></script>
-  <script src="src/sim.js"></script>
-  <script src="src/econ.js"></script>
-  <script src="src/combat.js"></script>
-  <script src="src/missions.js"></script>
-  <script src="src/sprites.js"></script>
-  <script src="src/units.js"></script>
-  <script src="src/terrain.js"></script>
-  <script src="src/creatures.js"></script>
-  <script src="src/objects.js"></script>
-  <script src="src/render.js"></script>
-  <script src="src/input.js"></script>
-  <script src="src/ui.js"></script>
-  <script src="src/main.js"></script>
+  <script src="src/rng.js?v=0.7.0"></script>
+  <script src="src/data.js?v=0.7.0"></script>
+  <script src="src/strings.js?v=0.7.0"></script>
+  <script src="src/pixel.js?v=0.7.0"></script>
+  <script src="src/shading.js?v=0.7.0"></script>
+  <script src="src/map.js?v=0.7.0"></script>
+  <script src="src/path.js?v=0.7.0"></script>
+  <script src="src/sim.js?v=0.7.0"></script>
+  <script src="src/econ.js?v=0.7.0"></script>
+  <script src="src/combat.js?v=0.7.0"></script>
+  <script src="src/missions.js?v=0.7.0"></script>
+  <script src="src/sprites.js?v=0.7.0"></script>
+  <script src="src/units.js?v=0.7.0"></script>
+  <script src="src/terrain.js?v=0.7.0"></script>
+  <script src="src/creatures.js?v=0.7.0"></script>
+  <script src="src/objects.js?v=0.7.0"></script>
+  <script src="src/render.js?v=0.7.0"></script>
+  <script src="src/input.js?v=0.7.0"></script>
+  <script src="src/ui.js?v=0.7.0"></script>
+  <script src="src/main.js?v=0.7.0"></script>
 </body>
 </html>

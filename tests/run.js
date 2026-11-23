@@ -387,5 +387,37 @@ function allArrived(state) {
   check('mission 4 is won', state.mission.result === 'win', `goal ${state.mission.goal}, mined ${big.max - big.amount}`);
 }
 
+// 21. Mission 5: the army walks into the palace and defeats the queen and her escort.
+{
+  const state = CP.createMission(5);
+  check('mission 5: Imapia with escort, a cannon at start', !!CP.unitById(state, state.bossId) && state.units.some((u) => u.type === 'cannon'));
+  const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler' && !(u.down > 0));
+  const steps = [[14, 38], [22, 32], [30, 27], [38, 22], [44, 21], [50, 16], [52, 11]];
+  for (const [x, y] of steps) {
+    CP.orderMove(state, army(), x, y);
+    run(state, 25);
+  }
+  const q = CP.unitById(state, state.bossId);
+  if (q) { CP.orderSmart(state, army().map((u) => u.id), q.x, q.y, q); run(state, 40); }
+  check('mission 5 is won by defeating Imapia', state.mission.result === 'win', `${army().length} fighters left, queen ${q && q.hearts}`);
+}
+
+// 22. Mission 6: through the caves past the nest to the Lord's grotto.
+{
+  const state = CP.createMission(6);
+  check('mission 6: cave map with lava, two Guardians and the Lord', state.map.theme === 'cave' && state.map.terrain.includes(CP.T.LAVA) && state.units.filter((u) => u.type === 'guardian').length === 2 && !!CP.unitById(state, state.bossId));
+  const lord = CP.unitById(state, state.bossId);
+  check('the Lord can be reached from the base', !!CP.findPath(state.map, 8, 43, Math.floor(lord.x) - 1, Math.floor(lord.y) + 1));
+  const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler' && !(u.down > 0));
+  const steps = [[14, 40], [22, 38], [30, 33], [36, 25], [40, 18], [47, 13], [52, 10]];
+  for (const [x, y] of steps) {
+    CP.orderMove(state, army(), x, y);
+    run(state, 25);
+  }
+  const l = CP.unitById(state, state.bossId);
+  if (l) { CP.orderSmart(state, army().map((u) => u.id), l.x, l.y, l); run(state, 60); }
+  check('mission 6 is won by defeating the Lord', state.mission.result === 'win', `${army().length} fighters left, lord ${l && l.hearts}`);
+}
+
 console.log(failed ? `\n${failed} failed` : '\nall passed');
 process.exit(failed ? 1 : 0);

@@ -144,6 +144,9 @@ Pixel art rysuje Claude Code w kodzie, jak w Grodzie. Każdy sprite to paleta i 
 - **Styl budynków i obiektów (od 0.5.0, po uwagach Grega):** cieniowanie światłem z lewej góry, 5–7 odcieni na materiał z ditheringiem, obrys w ciemniejszym odcieniu sąsiedniego koloru zamiast czarnej kreski, tekstury (cegły, nity, rdza, odbicia na szkle). Para, dym i blask rysowane bez obrysu. Narzędzia w `src/shading.js`.
 - **Teren bez kratki (od 0.5.2):** logika mapy zostaje na kaflach, ale obraz nie. Skały, wydmy i szczeliny mają zaokrąglone, poszarpane szumem brzegi. Skały to płaskowyże z głazami i ścianą urwiska od dołu, rzucające cień na piasek. Szczeliny to ciągłe, poszarpane rozpadliny przez środki kafli. Kod w `src/terrain.js`.
 - **Jednostki (od 0.6.0):** w stylu cieniowanym, każda z innym kształtem: osadnik ma szklany hełm-bańkę, butlę i kilof, piechur szeroką mosiężną zbroję z kominem i pięścią, strzelec długi płaszcz, kapelusz i długi karabin, bohater pomarańczową pelerynę, hełm z czerwonym pióropuszem i miecz, działo dwa duże koła i kocioł. Kod w `src/units.js`.
+- **Bossowie (od 0.7.0):** Imapia jest wyższa od MAibawu (karmazynowa zbroja, turkusowy szpiczasty hełm z czerwonym okiem, poszarpane skrzydła, mechaniczne nogi ze szponami). Władca to największy sprite w grze: fioletowy kryształowy olbrzym w mosiężnej zbroi, korona z kryształów, czaszka z kłami, okrągły napierśnik z różowym sercem.
+- **Jaskinie (misja 6):** ciemne fioletowo-szare dno z miękkimi ciemniejszymi plamami (szum, nie kafle), fioletowa skała, kryształy wyrastające ze ścian, jeziorka lawy (pomarańczowe z brązową skorupą, poświata na dnie). Kamyczki w kolorze skały.
+- **Pałac Imapii (misja 5):** zbudowany ręcznie, nie losowo: zewnętrzny mur z trzema bramami, dwa rzędy kolumn, wewnętrzna sala tronowa.
 - **Ruiny (od 0.6.0):** mury to poszarpane pasy kamienia między środkami kafli, o zmiennej wysokości (całe odcinki, wyszczerbione, zwalone kikuty), z gruzem dookoła. Logika nadal blokuje cały kafel.
 - **Kolor drużyny:** nasi mają jeden wyraźny kolor na stroju, np. pomarańczowy, żeby od razu odróżniać ich od stworów. Nie turkus, bo to kolor MAibawu.
 
@@ -174,11 +177,11 @@ Kolejność prac:
 2. ✅ Ekonomia: osadnik, kryształy, złom, lądownik, kopuła.
 3. ✅ Walka: piechur, strzelec, robaki i ich gniazda.
 4. ✅ Misje 1 i 2 z docelową grafiką. Test na Arturze przesunięty po etapie 5.
-5. Bohater, MAibawu, Strażnik, działo i misje 3–6. Greg 23.11.2026: robimy przed testem z Arturem. ← tu jesteśmy
+5. ✅ Bohater, MAibawu, Strażnik, działo i misje 3–6. Greg 23.11.2026: robimy przed testem z Arturem.
    1. ✅ Bohater, działo z kuźnią, MAibawu i Strażnik, nowa grafika naszych jednostek w stylu cieniowanym (0.6.0).
    2. ✅ Misje 3 i 4 (0.6.0). Sprawdzone w Chrome.
-   3. Misje 5 i 6 z Imapią i Władcą, koniec kampanii.
-6. Poprawki po teście z Arturem.
+   3. ✅ Misje 5 i 6 z Imapią i Władcą, ekran końca kampanii, menu na 6 misji (0.7.0). Sprawdzone w Chrome.
+6. Poprawki po teście z Arturem. ← tu jesteśmy (czekamy na test)
 
 ## Parametry startowe
 
@@ -272,21 +275,23 @@ Rozpisane przez Claude Code 23.11.2026, robocze do sprawdzenia na teście.
 
 **Misja 5: Królowa**
 
-- **Start:** lądownik, kopuła, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 200 kryształów, 200 złomu.
+- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 200 kryształów, 200 złomu. Druga kopuła doszła przy budowie, bo z jedną startowa armia (9) przekraczała limit 8.
 - **Mapa:** 64×48. Ruiny pałacu w prawym górnym rogu. Po drodze 2 patrole MAibawu. Imapia siedzi w pałacu z 2 MAibawu przy boku.
 - **Cel:** pokonaj Imapię, licznik 0/1. Imapia wypatruje wroga z 6 kafli i nie opuszcza pałacu dalej niż na 8 kafli.
 
 **Misja 6: Jaskinie (finał)**
 
-- **Start:** lądownik, kopuła, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 250 kryształów, 250 złomu.
+- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 250 kryształów, 250 złomu.
 - **Mapa:** 64×48, pod ziemią: ciemna skała, kryształowe ściany i jeziorka lawy (nieprzechodnie). Dwa Strażniki przy złożach i gniazdo robaków w połowie drogi.
 - **Władca Kryształów** w najgłębszej grocie. Wypatruje wroga z 5 kafli i nie opuszcza groty dalej niż na 6 kafli.
 - **Cel:** pokonaj Władcę, licznik 0/1. Po wygranej ekran końca kampanii.
 
 ## Stan prac i ustalenia z budowy
 
-Etapy 1–4 są zrobione (wersja 0.5.0). Misje 1 i 2 czekają na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
+Etapy 1–5 są zrobione (wersja 0.7.0), cała kampania 1–6 czeka na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
 
+- **Nowa wersja:** przy podbiciu `CP.VERSION` w `src/data.js` trzeba też zmienić `?v=` przy skryptach w `index.html`, żeby przeglądarka nie zmieszała starych plików z nowymi.
+- **Misje 5 i 6 w symulacji** wygrywa sama startowa armia z małymi stratami. Na teście sprawdzić, czy bossowie nie są za łatwi (przy obronie z kart można dodać im eskorty, a nie ruszać liczb).
 - **Budynki są niezniszczalne.** Robaki atakują tylko jednostki. Dzięki temu lądownik zawsze zostaje, a Artur nie traci bazy.
 - **Przegrana:** nie zostaje żadna jednostka i nie da się zrobić osadnika (brak lądownika albo mniej niż 50 kryształów). Sam lądownik bez kryształów to przegrana, bo inaczej gra by stanęła.
 - **Robaki** krążą przy swoim gnieździe i atakują to, co podejdzie na 5 kafli. Gonią najdalej 14 kafli od gniazda. Uderzony z daleka robak rusza na tego, kto go trafił.

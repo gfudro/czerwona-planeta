@@ -154,14 +154,51 @@
       }
   }
 
+  /**
+   * Crystal walls of the caves: violet crystal clusters growing out of the
+   * rock where it meets the floor, each spike with a lit and a shaded face.
+   */
+  function paintCaveCrystals(c, map, T, rockH) {
+    const W = map.w * T, H = map.h * T;
+    const rpA = CP.ramp(0xa070e0, 7, 0.75, 0.8), rpB = CP.ramp(0x70c8e0, 7, 0.75, 0.8);
+    for (let ty = 1; ty < map.h - 1; ty++)
+      for (let tx = 1; tx < map.w - 1; tx++) {
+        if (map.terrain[ty * map.w + tx] !== CP.T.ROCK) continue;
+        if (map.terrain[(ty + 1) * map.w + tx] >= CP.T.ROCK) continue; // only where rock meets floor below
+        if (CP.hash(tx, ty, 301) > 0.38) continue;
+        const rp = CP.hash(tx, ty, 302) < 0.8 ? rpA : rpB;
+        const n = 2 + Math.floor(CP.hash(tx, ty, 303) * 3);
+        for (let k = 0; k < n; k++) {
+          const bx = tx * T + 6 + Math.floor(CP.hash(tx, ty, 310 + k) * 20);
+          // Base sits on the rock just above the cliff foot.
+          let by = (ty + 1) * T - 4;
+          while (by > ty * T && by < H && rockH[by * W + bx] === 0) by--;
+          const h = 6 + Math.floor(CP.hash(tx, ty, 320 + k) * 12), w = 1.6 + CP.hash(tx, ty, 330 + k) * 1.8;
+          const lean = (CP.hash(tx, ty, 340 + k) - 0.5) * 0.6;
+          for (let y = 0; y < h; y++) {
+            const t = y / h, half = w * (1 - t * 0.85), cx = bx + lean * y;
+            for (let xx = Math.floor(cx - half); xx <= Math.ceil(cx + half); xx++) {
+              if (xx < 0 || xx >= W || by - y < 0) continue;
+              const left = xx + 0.5 < cx;
+              c.px(xx, by - y, CP.tone(rp, (left ? 0.78 : 0.4) + t * 0.15, xx, by - y));
+            }
+          }
+          c.px(Math.round(bx + lean * (h - 1)), by - h + 1, 0xffffff);
+        }
+      }
+  }
+
   CP.paintTerrain = function (map) {
     const T = CP.ART_TILE;
     const W = map.w * T, H = map.h * T;
     const c = new CP.PixelCanvas(W, H);
     const data = c.data;
     const M = CP.MAT;
+    const cave = map.theme === 'cave';
     const rockF = makeField(map, T, (k) => k === CP.T.ROCK);
     const duneF = makeField(map, T, (k) => k === CP.T.DUNE);
+    const lavaF = makeField(map, T, (k) => k === CP.T.LAVA);
+    const hasLava = map.terrain.includes(CP.T.LAVA);
 
     // 1. Height of the rock: a cliff rising at the noisy edge, boulders on top.
     const rockH = new Float32Array(W * H);
@@ -225,10 +262,14 @@
     }
 
     const sandR = M.sand;
-    const CRACK = CP.ramp(0x7a3420, 6, 0.85, 0.3);
-    const CLIFF = CP.ramp(0x8a4630, 6, 0.8, 0.3);
-    const SAND = [0xc4623a, 0xcc6c42, 0xb85a34, 0xd27a4c];
-    const DUNE = [0xa84e2e, 0xb05632, 0x9c4628, 0xb85e38];
+    // The caves of mission 6: dark violet-grey stone instead of red sand.
+    const ROCK = cave ? CP.ramp(0x6a5a80, 6, 0.8, 0.45) : M.rock;
+    const CRACK = cave ? CP.ramp(0x3a2c44, 6, 0.85, 0.3) : CP.ramp(0x7a3420, 6, 0.85, 0.3);
+    const CLIFF = cave ? CP.ramp(0x4a3c5a, 6, 0.8, 0.3) : CP.ramp(0x8a4630, 6, 0.8, 0.3);
+    const SAND = cave ? [0x4e4054, 0x56475c, 0x46394c, 0x605066] : [0xc4623a, 0xcc6c42, 0xb85a34, 0xd27a4c];
+    const DUNE = cave ? [0x3e3244, 0x44374a, 0x382d3e, 0x4a3c50] : [0xa84e2e, 0xb05632, 0x9c4628, 0xb85e38];
+    const LAVA = CP.ramp(0xd84a10, 7, 0.75, 0.6);
+    const CRUST = CP.ramp(0x5a2014, 6, 0.8, 0.4);
     const put = (i, col) => {
       data[i * 4] = (col >> 16) & 255; data[i * 4 + 1] = (col >> 8) & 255; data[i * 4 + 2] = col & 255; data[i * 4 + 3] = 255;
     };
@@ -252,7 +293,20 @@
           const below = y + 1 < H ? rockH[i + W] : 1, right = x + 1 < W ? rockH[i + 1] : 1;
           if (right === 0) l = Math.min(l, 0.12);
           if (below === 0) l = Math.min(l, 0.3);
-          put(i, CP.tone(M.rock, l, x, y));
+          put(i, CP.tone(ROCK, l, x, y));
+          continue;
+        }
+        const lv = hasLava ? lavaF(x, y) + (vnoise(x, y, 7, 51) - 0.5) * 0.3 : 0;
+        if (lv > 0.5) {
+          // Lava: glowing, slowly swirling, with dark crust plates and a dark rim.
+          const rim = lv < 0.58;
+          const swirl = vnoise(x + Math.sin(y * 0.15) * 6, y, 9, 52);
+          // Crust: floating plates of cooled rock, with bright seams between them.
+          const cv = vnoise(x, y, 6, 53);
+          const crust = cv > 0.6 && lv > 0.62, seam = cv > 0.54 && cv <= 0.6;
+          if (rim) put(i, CP.tone(CRACK, 0.1, x, y));
+          else if (crust) put(i, CP.tone(CRUST, 0.3 + (cv - 0.6) * 1.2 + (CP.hash(x, y, 54) - 0.5) * 0.1, x, y));
+          else put(i, CP.tone(LAVA, Math.min(0.92, 0.3 + swirl * 0.4 + (seam ? 0.25 : 0) + (lv - 0.6) * 0.3), x, y));
           continue;
         }
         const k = crack[i];
@@ -278,15 +332,18 @@
         }
         // 5. Sand with grain, softly blended into darker dunes.
         const g = CP.hash(x >> 1, y >> 1, 3);
-        const dv = duneF(x, y) + (fbm(x, y, 31) - 0.5) * 0.7;
+        // Caves have no dunes: just soft darker patches of stone from noise.
+        const dv = cave ? 0.35 + (fbm(x, y, 31) - 0.42) * 1.6 : duneF(x, y) + (fbm(x, y, 31) - 0.5) * 0.7;
         const dune = Math.max(0, Math.min(1, (dv - 0.35) * 2.5)) > th;
         const pal = dune ? DUNE : SAND;
         let col = g < 0.6 ? pal[0] : g < 0.8 ? pal[1] : g < 0.95 ? pal[2] : pal[3];
         // Gentle wind ripples.
         const wave = Math.sin(x * 0.05 + Math.sin(y * 0.12) * 1.5) * 4;
-        if ((y + Math.round(wave)) % 11 === 0 && CP.hash(x >> 3, y >> 3, 5) < 0.6) col = CP.mix(col, 0x7a2e1a, 0.14);
+        if (!cave && (y + Math.round(wave)) % 11 === 0 && CP.hash(x >> 3, y >> 3, 5) < 0.6) col = CP.mix(col, 0x7a2e1a, 0.14);
         // Lip of a crack catches the light just below it.
-        if (k > -0.3) col = CP.mix(col, 0xe89a6a, 0.3);
+        if (k > -0.3) col = CP.mix(col, cave ? 0x8a7a98 : 0xe89a6a, 0.3);
+        // Floor near lava glows orange.
+        if (lv > 0.15) col = CP.mix(col, 0xff7a20, Math.min(0.55, (lv - 0.15) * 1.4));
         // 5. Rock and its boulders cast a shadow to the bottom-right.
         let sh = 0;
         for (let s = 2; s <= 8; s += 2) {
@@ -298,6 +355,7 @@
       }
 
     paintRuins(c, map, T);
+    if (cave) paintCaveCrystals(c, map, T, rockH);
 
     // Pebbles on the sand.
     for (let ty = 0; ty < map.h; ty++)
@@ -307,7 +365,8 @@
           if (CP.hash(tx, ty, 20 + k) > 0.45) continue;
           const x = tx * T + Math.floor(CP.hash(tx, ty, 30 + k) * 28) + 2, y = ty * T + Math.floor(CP.hash(tx, ty, 40 + k) * 28) + 2;
           if (rockH[y * W + x] > 0 || crack[y * W + x] > -0.3) continue;
-          c.raw(x, y, sandR[1]).raw(x + 1, y, sandR[3]).raw(x, y + 1, sandR[0]);
+          const pr = cave ? ROCK : sandR;
+          c.raw(x, y, pr[1]).raw(x + 1, y, pr[3]).raw(x, y + 1, pr[0]);
         }
       }
     return c;

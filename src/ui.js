@@ -114,7 +114,9 @@
       base.width = map.w;
       base.height = map.h;
       const bctx = base.getContext('2d');
-      const COLORS = { [CP.T.SAND]: '#c4623a', [CP.T.DUNE]: '#a84e2e', [CP.T.ROCK]: '#4e2418', [CP.T.CRACK]: '#24100c', [CP.T.RUIN]: '#9a8478', [CP.T.LAVA]: '#ff7a20' };
+      const COLORS = map.theme === 'cave'
+        ? { [CP.T.SAND]: '#5a4a60', [CP.T.DUNE]: '#4a3c50', [CP.T.ROCK]: '#1e1626', [CP.T.CRACK]: '#140c18', [CP.T.RUIN]: '#9a8478', [CP.T.LAVA]: '#ff7a20' }
+        : { [CP.T.SAND]: '#c4623a', [CP.T.DUNE]: '#a84e2e', [CP.T.ROCK]: '#4e2418', [CP.T.CRACK]: '#24100c', [CP.T.RUIN]: '#9a8478', [CP.T.LAVA]: '#ff7a20' };
       for (let y = 0; y < map.h; y++)
         for (let x = 0; x < map.w; x++) {
           bctx.fillStyle = COLORS[map.terrain[y * map.w + x]];
@@ -418,7 +420,20 @@
       ov.innerHTML = '';
       ov.style.display = 'flex';
       const box = h('div', 'menuBox end');
-      box.appendChild(h('h1', null, win ? STR.win : STR.lose));
+      const final = win && game.state.mission.id === CP.MISSION_COUNT;
+      box.appendChild(h('h1', null, final ? STR.theEnd : win ? STR.win : STR.lose));
+      if (final) {
+        // The end of the campaign: the hero standing beside both defeated bosses.
+        const art = h('div', 'endArt');
+        for (const type of ['imapia', 'hero', 'crystalLord']) {
+          const spr = CP.unitSprite(type, 0, false);
+          const c = iconEl(spr, '');
+          c.style.width = spr.width * 4 + 'px';
+          c.style.height = spr.height * 4 + 'px';
+          art.appendChild(c);
+        }
+        box.appendChild(art);
+      }
       const row = h('div', 'endRow');
       if (win) {
         const b = h('button', 'big', STR.next);
