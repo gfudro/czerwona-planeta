@@ -89,7 +89,7 @@
       u.work += DT();
       if (u.work < CP.ECON.mineTime) return;
       u.work = 0;
-      const take = Math.min(CP.ECON.carry, n.amount);
+      const take = Math.min(CP.ECON.carry + (hasUpgrade(state, 'picks') ? CP.UPGRADES.picks.carry : 0), n.amount);
       n.amount -= take;
       u.carry = { kind: nodeResource(n), amount: take };
       if (u.hidden) exitDeposit(state, u);
@@ -134,9 +134,68 @@
   // ---- Unit limit and training ------------------------------------------
 
   function popCap(state) {
-    let cap = 0;
-    for (const b of state.buildings) if (b.built) cap += CP.BUILDING_TYPES[b.type].pop || 0;
-    return Math.min(CP.ECON.popMax, cap);
+    const extra = hasUpgrade(state, 'supplies') ? CP.UPGRADES.supplies.pop : 0;
+    let cap = 0, domes = 0;
+    for (const b of state.buildings) if (b.built) { cap += CP.BUILDING_TYPES[b.type].pop || 0; if (b.type === 'dome') domes++; }
+    return Math.min(CP.ECON.popMax + domes * extra, cap + domes * extra);
+  }
+
+  // ---- Upgrades -----------------------------------------------------------
+
+  function hasUpgrade(state, id) {
+    return !!(state.upg && state.upg.done[id]);
+  }
+
+  /** Sum of a stat bonus (attack, defense, range, speed) our upgrades give a unit type. */
+  function upgradeBonus(state, type, stat) {
+    if (!state.upg) return 0;
+    let n = 0;
+    for (const id in state.upg.done) {
+      const u = CP.UPGRADES[id];
+      if (u[stat] && u.units && u.units.includes(type)) n += u[stat];
+    }
+    return n;
+  }
+
+  /** Why an upgrade can't be started ('off', 'chosen', 'busy', 'money', 'built') or null. */
+  function upgradeBlocker(state, b, id) {
+    if (!state.upg) return 'off';
+    if (!b.built) return 'built';
+    if (state.upg.chosen[b.type]) return 'chosen';
+    if (!canAfford(state, CP.UPGRADES[id].cost)) return 'money';
+    return null;
+  }
+
+  function startUpgrade(state, b, id) {
+    if (upgradeBlocker(state, b, id)) return false;
+    pay(state, CP.UPGRADES[id].cost);
+    state.upg.chosen[b.type] = id;
+    b.research = { id, t: 0 };
+    return true;
+  }
+
+  function updateResearch(state) {
+    for (const b of state.buildings) {
+      if (!b.research) continue;
+      b.research.t += DT();
+      if (b.research.t >= CP.UPGRADES[b.research.id].time) {
+        state.upg.done[b.research.id] = true;
+        state.events.push({ type: 'upgraded', id: b.research.id, x: b.x + b.size / 2, y: b.y + b.size / 2 });
+        b.research = null;
+      }
+    }
+    // The infirmary: our units near a dome get a heart back now and then.
+    const heal = hasUpgrade(state, 'infirmary') && CP.UPGRADES.infirmary.heal;
+    if (heal && state.tick % Math.round(heal.every * CP.SIM_HZ) === 0) {
+      const domes = state.buildings.filter((b) => b.type === 'dome' && b.built);
+      for (const u of state.units) {
+        if (u.owner !== 'player' || u.down > 0 || u.hearts >= CP.maxHearts(u)) continue;
+        if (domes.some((d) => Math.hypot(u.x - (d.x + d.size / 2), u.y - (d.y + d.size / 2)) <= heal.radius + d.size / 2)) {
+          u.hearts++;
+          state.events.push({ type: 'healed', id: u.id, x: u.x, y: u.y });
+        }
+      }
+    }
   }
 
   /** Our units plus those waiting in training queues. */
@@ -192,6 +251,7 @@
   }
 
   function updateTraining(state) {
+    updateResearch(state);
     for (const b of state.buildings) {
       if (!b.built || !b.queue.length) continue;
       b.trainT += DT();
@@ -247,6 +307,7 @@
 
   Object.assign(CP, {
     nodeResource, nearestDepot, isGuarded, exitDeposit, popCap, popUsed, canAfford,
+    hasUpgrade, upgradeBonus, upgradeBlocker, startUpgrade,
     trainBlocker, train, cancelTrain, canPlace, placeBuilding, updateEconomy,
   });
 })(window.CP = window.CP || {});

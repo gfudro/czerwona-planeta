@@ -87,6 +87,22 @@
     return Math.max(36, Math.min(80, meta.hitW * 2 * S * 0.8));
   }
 
+  /** A shimmering blue bubble around a shielded boss. */
+  function drawShield(ctx, u, p, now) {
+    const m = CP.SPRITE_META[u.type];
+    const h = m.footY * S, rx = m.hitW * S + 12, ry = h / 2 + 10;
+    const a = 0.55 + Math.sin(now / 300) * 0.2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y - h / 2, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(90,200,255,${(a * 0.25).toFixed(3)})`;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = `rgba(160,230,255,${a.toFixed(3)})`;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function selRing(type) {
     const meta = CP.SPRITE_META[type];
     const rx = Math.max(22, meta.hitW * S * 1.1);
@@ -293,6 +309,7 @@
           if (sel.has(u.id)) ring(ctx, p.x, p.y - 4, rx, ry, '#4dff6a');
           if (view.hover === u.id && u.owner === 'wild') ring(ctx, p.x, p.y - 4, rx, ry, '#ff4030');
           drawUnit(r, u, p);
+          if (u.shield && CP.isVisible(state, u.x, u.y)) drawShield(ctx, u, p, now);
         },
       });
     }
@@ -357,7 +374,8 @@
   function takeEvents(r, state, now) {
     for (const e of state.events) {
       if (e.type === 'dmg') {
-        r.fx.push({ kind: 'text', x: e.x + 0.15, y: e.y, t: now, life: 900, text: '−' + e.amount, color: e.owner === 'player' ? 'rgba(255,90,70,A)' : 'rgba(255,240,170,A)' });
+        if (e.amount === 0) r.fx.push({ kind: 'text', x: e.x + 0.15, y: e.y, t: now, life: 900, text: '0', color: 'rgba(140,220,255,A)' });
+        else r.fx.push({ kind: 'text', x: e.x + 0.15, y: e.y, t: now, life: 900, text: '−' + e.amount, color: e.owner === 'player' ? 'rgba(255,90,70,A)' : 'rgba(255,240,170,A)' });
       } else if (e.type === 'shot' && e.heavy) {
         r.fx.push({ kind: 'ball', x: e.x0, y: e.y0, x1: e.x1, y1: e.y1, t: now, life: 450 });
         r.fx.push({ kind: 'boom', x: e.x1, y: e.y1, t: now + 450, life: 400 });
@@ -379,6 +397,10 @@
         r.fx.push({ kind: 'dust', x: e.x, y: e.y, t: now, life: 600 });
       } else if (e.type === 'spotted') {
         r.fx.push({ kind: 'ping', x: e.x, y: e.y, t: now, life: 1200 });
+      } else if (e.type === 'upgraded') {
+        r.fx.push({ kind: 'text', x: e.x, y: e.y - 1, t: now, life: 2200, text: '▲ ' + CP.STR.upgrades[e.id], size: 30, color: 'rgba(120,255,140,A)' });
+      } else if (e.type === 'healed') {
+        r.fx.push({ kind: 'text', x: e.x + 0.15, y: e.y, t: now, life: 800, size: 22, text: '+1', color: 'rgba(120,255,140,A)' });
       } else if (e.type === 'tamed') {
         r.fx.push({ kind: 'text', x: e.x, y: e.y, t: now, life: 1400, text: '♥', size: 34, color: 'rgba(255,90,90,A)' });
       }

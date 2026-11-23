@@ -384,12 +384,15 @@
         CP.addNode(state, 'wreck', wreck.x, wreck.y, CP.ECON.wreck);
         CP.addNode(state, 'wreck', wreck2.x, wreck2.y, CP.ECON.wreck);
         state.rocket = CP.addNode(state, 'rocket', rocket.x, rocket.y, 400, 3);
-        routes.forEach((r, i) => addPatrol(state, r, i + 1, i));
-        startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman', 'rifleman']);
-        state.res = { crystals: 150, scrap: 100 };
+        [2, 3, 4].forEach((n, i) => addPatrol(state, routes[i], n, i));
+        // Three more MAibawu keep watch by the rocket.
+        addPatrol(state, [{ x: rocket.x - 1.5, y: rocket.y + 4.5 }, { x: rocket.x + 2.5, y: rocket.y + 4.5 }], 3, 'rocket');
+        startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'rifleman']);
+        state.res = { crystals: 250, scrap: 200 };
         return state;
       },
-      goals: [{ icon: 'rocket', target: 1, count: (s) => (s.rocketReached || (s.rocketReached = reached(s, s.rocket))) ? 1 : 0 }],
+      // Bring 100 scrap from the old rocket: settlers have to get there and back alive.
+      goals: [{ icon: 'rocket', target: 100, count: (s) => s.rocket.max - s.rocket.amount }],
     },
 
     4: {
@@ -429,8 +432,8 @@
         state.bigNode = bigNode;
         state.guardId = g.id;
         CP.addNest(state, nest.x, nest.y, { firstSpawn: 90, interval: 45 });
-        startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman']);
-        state.res = { crystals: 200, scrap: 200 };
+        startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry']);
+        state.res = { crystals: 300, scrap: 280 };
         return state;
       },
       goals: [
@@ -497,15 +500,15 @@
       // Raids: the queen sends MAibawu down to our base now and then.
       state.throne = throne;
       state.raid = { route: [{ x: 42.5, y: 12.5 }, { x: 30.5, y: 28.5 }, { x: BASE.x + 7, y: BASE.y - 3 }], next: RAID.first, left: RAID.count };
-      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman']);
-      state.res = { crystals: 300, scrap: 250 };
+      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'rifleman']);
+      state.res = { crystals: 400, scrap: 350 };
       return state;
     },
     goals: [{ icon: 'imapia', target: 1, count: (s) => (CP.unitById(s, s.bossId) ? 0 : 1) }],
     update(state) {
       // The first blow on the queen: she calls four more MAibawu from the throne hall.
       const q = CP.unitById(state, state.bossId);
-      if (q && !state.queenCalled && q.hearts < CP.UNIT_TYPES.imapia.hearts) {
+      if (q && !state.queenCalled && q.hitBy != null) {
         state.queenCalled = true;
         addPatrol(state, [{ x: state.throne.x + 2.5, y: state.throne.y - 1.5 }], 4, 'queen');
         for (const u of state.units) if (u.group === 'queen' && !u.order && q.order) u.order = { type: 'attack', targetId: q.order.targetId };
@@ -568,12 +571,34 @@
       }
       startBuildings(state, ['forge', 'dome']);
       CP.addNest(state, nest.x, nest.y, { firstSpawn: 90, interval: 45 });
-      state.bossId = addCreature(state, 'crystalLord', lord.x, lord.y).id;
-      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'infantry', 'rifleman', 'rifleman', 'cannon']);
-      state.res = { crystals: 250, scrap: 250 };
+      // The Lord with his guard: two Guardians at his sides and three MAibawu.
+      const boss = addCreature(state, 'crystalLord', lord.x, lord.y);
+      boss.group = 'lord';
+      state.bossId = boss.id;
+      state.lordHome = lord;
+      for (const dx of [-2, 2]) addCreature(state, 'guardian', lord.x + dx, lord.y + 1).group = 'lord';
+      addPatrol(state, [{ x: lord.x - 3.5, y: lord.y + 3.5 }, { x: lord.x + 1.5, y: lord.y + 3.5 }], 3, 'lord');
+      startUnits(state, ['hero', 'settler', 'settler', 'settler', 'infantry', 'rifleman']);
+      state.res = { crystals: 450, scrap: 400 };
       return state;
     },
     goals: [{ icon: 'crystalLord', target: 1, count: (s) => (CP.unitById(s, s.bossId) ? 0 : 1) }],
+    update(state) {
+      // The first blow on the Lord: two big worms and two MAibawu come out of the deep.
+      const l = CP.unitById(state, state.bossId);
+      if (l && !state.lordCalled && l.hitBy != null) {
+        state.lordCalled = true;
+        const h = state.lordHome;
+        for (const [dx, dy] of [[3, -2], [-3, -2]]) {
+          const p = CP.nearestWalkable(state.map, Math.floor(h.x + dx), Math.floor(h.y + dy));
+          const w = addCreature(state, 'wormBig', p.x, p.y);
+          w.group = 'lord';
+        }
+        addPatrol(state, [{ x: h.x + 0.5, y: h.y - 2.5 }], 2, 'lord');
+        for (const u of state.units) if (u.group === 'lord' && !u.order && l.order) u.order = { type: 'attack', targetId: l.order.targetId };
+        state.events.push({ type: 'spawn', x: l.x, y: l.y });
+      }
+    },
   };
 
   CP.MISSIONS = MISSIONS;
@@ -583,6 +608,7 @@
     const def = MISSIONS[id];
     const state = def.build(seed || id * 1000 + 7);
     state.mission = { id, goal: 0, result: null, goalDoneAt: -10 };
+    if (id >= 3) state.upg = { chosen: {}, done: {} }; // building upgrades from mission 3
     CP.updateFog(state);
     return state;
   }

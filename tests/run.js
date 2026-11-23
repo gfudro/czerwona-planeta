@@ -24,6 +24,70 @@ function run(state, seconds) {
   for (let i = 0; i < seconds * CP.SIM_HZ; i++) CP.tick(state);
 }
 
+/**
+ * Plays a mission like a simple player. 'march': the starting army walks to
+ * the goal. 'play': settlers gather, buildings train and upgrade until
+ * `attackAt` seconds, then the whole army goes; at a shielded boss it beats
+ * the guard first.
+ */
+function playMission(id, mode, attackAt = 240) {
+  store['czerwona-planeta-postep'] = JSON.stringify({ won: [1, 2, 3, 4, 5], hero: { level: 3, xp: 7 } });
+  const s = CP.createMission(id);
+  const routes = {
+    3: [[14, 38], [22, 33], [28, 27], [36, 22], [44, 16], [50, 10], [55, 7]],
+    5: [[14, 38], [22, 32], [30, 27], [38, 22], [44, 21], [50, 16], [52, 11]],
+    6: [[14, 40], [22, 38], [30, 33], [36, 25], [40, 18], [47, 13], [52, 10]],
+  }[id];
+  const fighters = () => s.units.filter((u) => u.owner === 'player' && u.type !== 'settler' && !(u.down > 0));
+  const econ = () => {
+    const settlers = s.units.filter((u) => u.type === 'settler');
+    const crystals = s.nodes.filter((n) => n.kind === 'crystal' && n.amount > 0), wrecks = s.nodes.filter((n) => n.kind === 'wreck' && n.amount > 0);
+    settlers.forEach((u, i) => {
+      if (u.order) return;
+      const list = i === 0 && wrecks.length ? wrecks : crystals.length ? crystals : wrecks;
+      if (!list.length) return;
+      const n = list.sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y))[0];
+      CP.orderSmart(s, [u.id], n.x + 0.5, n.y + 0.5);
+    });
+    for (const [bt, up] of [['workshop', 'swords'], ['forge', 'barrels'], ['dome', 'infirmary'], ['lander', 'picks']]) {
+      const b = s.buildings.find((o) => o.type === bt && o.built);
+      if (b && !s.upg.chosen[bt]) CP.startUpgrade(s, b, up);
+    }
+    const ws = s.buildings.find((o) => o.type === 'workshop'), fg = s.buildings.find((o) => o.type === 'forge');
+    for (const t of ['infantry', 'rifleman', 'cannon', 'infantry', 'rifleman']) {
+      const b = t === 'cannon' ? fg : ws;
+      if (b && b.built && b.queue.length < 2) CP.train(s, b, t);
+    }
+    const l = s.buildings.find((o) => o.type === 'lander');
+    if (settlers.length < 4 && !l.queue.length) CP.train(s, l, 'settler');
+  };
+  const play = mode === 'play';
+  const go = (sec) => { for (let i = 0; i < sec * CP.SIM_HZ && !s.mission.result; i++) { CP.tick(s); s.events.length = 0; if (play && i % 20 === 0) econ(); } };
+  if (play) go(attackAt);
+  for (const [x, y] of routes) { CP.orderMove(s, fighters(), x, y); go(25); }
+  if (s.rocket) {
+    for (let k = 0; k < 3; k++) { CP.orderMove(s, fighters(), s.rocket.x + 1, s.rocket.y + 3); go(15); }
+    for (let k = 0; k < 20 && !s.mission.result; k++) {
+      for (const u of s.units.filter((o) => o.type === 'settler' && !o.order)) CP.orderSmart(s, [u.id], s.rocket.x + 1, s.rocket.y + 1);
+      go(10);
+    }
+  }
+  for (let k = 0; k < 16 && !s.mission.result && s.bossId; k++) {
+    const b = CP.unitById(s, s.bossId);
+    if (!b) break;
+    let t = b;
+    if (b.shield) {
+      const f = fighters()[0] || b;
+      const g = s.units.filter((o) => o !== b && o.group === b.group && o.hearts > 0).sort((x, y) => Math.hypot(x.x - f.x, x.y - f.y) - Math.hypot(y.x - f.x, y.y - f.y));
+      if (g[0]) t = g[0];
+    }
+    if (CP.isVisible(s, t.x, t.y)) CP.orderSmart(s, fighters().map((u) => u.id), t.x, t.y, t);
+    else CP.orderMove(s, fighters(), Math.floor(t.x), Math.floor(t.y));
+    go(10);
+  }
+  return s;
+}
+
 function allArrived(state) {
   return state.units.every((u) => u.path.length === 0 && !u.order);
 }
@@ -346,17 +410,12 @@ function allArrived(state) {
 }
 
 
-// 19. Mission 3: the army walks to the rocket in steps, fighting the patrols on the way.
+// 19. Mission 3: the starting army can't do it alone; a built-up army clears the way and settlers take the rocket apart.
 {
-  const state = CP.createMission(3);
-  check('mission 3: hero and 6 MAibawu in 3 patrols', state.units.some((u) => u.type === 'hero') && state.units.filter((u) => u.type === 'maibawu').length === 6);
-  const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler');
-  const steps = [[14, 38], [22, 33], [28, 27], [36, 22], [44, 16], [50, 10], [55, 7]];
-  for (const [x, y] of steps) {
-    CP.orderMove(state, army(), x, y);
-    run(state, 25);
-  }
-  check('mission 3 is won by reaching the rocket', state.mission.result === 'win', `${army().length} fighters left, MAibawu left ${state.units.filter((u) => u.type === 'maibawu').length}`);
+  const march = playMission(3, 'march');
+  check('mission 3 is not won by the starting army alone', march.mission.result !== 'win');
+  const play = playMission(3, 'play', 300);
+  check('mission 3 is won after training and upgrades', play.mission.result === 'win', `t=${play.time | 0}`);
 }
 
 // 20. Mission 4: forge, cannon, Guardian down, crystals from the big deposit.
@@ -387,42 +446,45 @@ function allArrived(state) {
   check('mission 4 is won', state.mission.result === 'win', `goal ${state.mission.goal}, mined ${big.max - big.amount}`);
 }
 
-// 21. Mission 5: the starting army alone barely makes it; after training more it wins comfortably.
+// 21. Mission 5: the queen is shielded by her guard; the starting army loses, a built-up army wins.
 {
   const state = CP.createMission(5);
-  check('mission 5: Imapia with escort, raids planned', !!CP.unitById(state, state.bossId) && state.raid && state.raid.left > 0);
-  const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler' && !(u.down > 0));
-  const ws = state.buildings.find((b) => b.type === 'workshop'), fg = state.buildings.find((b) => b.type === 'forge');
-  for (const t of ['infantry', 'infantry', 'rifleman', 'rifleman']) CP.train(state, ws, t);
-  CP.train(state, fg, 'cannon');
-  run(state, 85);
-  const before = army().length;
-  const steps = [[14, 38], [22, 32], [30, 27], [38, 22], [44, 21], [50, 16], [52, 11]];
-  for (const [x, y] of steps) {
-    CP.orderMove(state, army(), x, y);
-    run(state, 25);
-  }
   const q = CP.unitById(state, state.bossId);
-  if (q) { CP.orderSmart(state, army().map((u) => u.id), q.x, q.y, q); run(state, 60); }
-  check('mission 5 is won with a trained army', state.mission.result === 'win', `${before} fighters went, ${army().length} left, queen ${q && q.hearts}`);
-  check('the queen called her guard', state.queenCalled);
+  run(state, 0.1);
+  check('mission 5: the queen starts behind a shield', q.shield === true);
+  const march = playMission(5, 'march');
+  check('mission 5 is not won by the starting army alone', march.mission.result !== 'win');
+  const play = playMission(5, 'play', 300);
+  check('mission 5 is won after training and upgrades', play.mission.result === 'win', `t=${play.time | 0}`);
+  check('the queen called her guard', play.queenCalled);
 }
 
-// 22. Mission 6: through the caves past the nest to the Lord's grotto.
+// 22. Mission 6: caves with lava, the Lord with Guardians and MAibawu around him.
 {
   const state = CP.createMission(6);
-  check('mission 6: cave map with lava, two Guardians and the Lord', state.map.theme === 'cave' && state.map.terrain.includes(CP.T.LAVA) && state.units.filter((u) => u.type === 'guardian').length === 2 && !!CP.unitById(state, state.bossId));
+  check('mission 6: cave map with lava, four Guardians, the Lord', state.map.theme === 'cave' && state.map.terrain.includes(CP.T.LAVA) && state.units.filter((u) => u.type === 'guardian').length === 4 && !!CP.unitById(state, state.bossId));
   const lord = CP.unitById(state, state.bossId);
   check('the Lord can be reached from the base', !!CP.findPath(state.map, 8, 43, Math.floor(lord.x) - 1, Math.floor(lord.y) + 1));
-  const army = () => state.units.filter((u) => u.owner === 'player' && u.type !== 'settler' && !(u.down > 0));
-  const steps = [[14, 40], [22, 38], [30, 33], [36, 25], [40, 18], [47, 13], [52, 10]];
-  for (const [x, y] of steps) {
-    CP.orderMove(state, army(), x, y);
-    run(state, 25);
-  }
-  const l = CP.unitById(state, state.bossId);
-  if (l) { CP.orderSmart(state, army().map((u) => u.id), l.x, l.y, l); run(state, 60); }
-  check('mission 6 is won by defeating the Lord', state.mission.result === 'win', `${army().length} fighters left, lord ${l && l.hearts}`);
+  const march = playMission(6, 'march');
+  check('mission 6 is not won by the starting army alone', march.mission.result !== 'win');
+  const play = playMission(6, 'play', 300);
+  check('mission 6 is won after training and upgrades', play.mission.result === 'win', `t=${play.time | 0}`);
+}
+
+// 23. Upgrades: a choice locks the other one out; Swords add to the infantry's attack; a shield stops all harm.
+{
+  const state = CP.createMission(5);
+  const ws = state.buildings.find((b) => b.type === 'workshop');
+  check('Swords can be started', CP.startUpgrade(state, ws, 'swords'));
+  check('then Shields are locked out', CP.upgradeBlocker(state, ws, 'shields') === 'chosen');
+  run(state, CP.UPGRADES.swords.time + 1);
+  check('Swords give infantry +2 attack', CP.upgradeBonus(state, 'infantry', 'attack') === 2 && CP.upgradeBonus(state, 'rifleman', 'attack') === 0);
+  const q = CP.unitById(state, state.bossId);
+  const inf = state.units.find((u) => u.type === 'infantry');
+  const before = q.hearts;
+  q.shield = true;
+  for (let i = 0; i < 5; i++) CP.damage(state, inf, q);
+  check('a shielded boss takes no harm', q.hearts === before);
 }
 
 console.log(failed ? `\n${failed} failed` : '\nall passed');

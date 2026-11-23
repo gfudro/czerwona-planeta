@@ -13,6 +13,7 @@
     autoPause: 'Autopauza',
     fullscreen: 'Ekran',
     sound: 'Dźwięk',
+    or: 'albo',
     music: 'Muzyka',
     win: 'Brawo!',
     next: 'Dalej',
@@ -20,6 +21,17 @@
     again: 'Jeszcze',
     mission: 'Misja',
     theEnd: 'Zwycięstwo!',
+    // Building upgrades: one word each.
+    upgrades: {
+      picks: 'Kilofy',
+      boots: 'Buty',
+      supplies: 'Zapasy',
+      infirmary: 'Lecznica',
+      swords: 'Miecze',
+      shields: 'Tarcze',
+      barrels: 'Lufy',
+      sights: 'Celowniki',
+    },
     // What to do now, shown next to the goal counter: two or three short words.
     // Keyed by "mission.goal".
     goalText: {
@@ -28,7 +40,7 @@
       '1.2': 'Zrób osadnika',
       '1.3': 'Zbierz kryształy',
       '2.0': 'Zasyp gniazda',
-      '3.0': 'Idź do rakiety',
+      '3.0': 'Rozbierz rakietę',
       '4.0': 'Zbuduj kuźnię',
       '4.1': 'Pokonaj Strażnika',
       '4.2': 'Kop duże złoże',

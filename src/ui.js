@@ -332,7 +332,41 @@
           cmd.appendChild(q);
         }
       }
+      if (b && b.built && state.upg && CP.UPGRADE_PAIRS[b.type]) upgradeCommands(state, b);
       cmd.style.display = cmd.childNodes.length ? 'flex' : 'none';
+    }
+
+    /**
+     * The two upgrades of a building, side by side. Before choosing both are
+     * offered; after choosing only the chosen one stays, with its progress
+     * and then a tick. The other is gone for the rest of the mission.
+     */
+    function upgradeCommands(state, b) {
+      const pair = CP.UPGRADE_PAIRS[b.type];
+      const chosen = state.upg.chosen[b.type];
+      const row = h('div', 'upRow');
+      for (const id of pair) {
+        if (chosen && chosen !== id) continue;
+        const def = CP.UPGRADES[id];
+        const done = state.upg.done[id];
+        if (chosen) {
+          // Chosen: show it with progress or as finished.
+          const box = h('div', 'cmd upDone');
+          box.appendChild(iconEl(CP.icon('up_' + id), 'uicon'));
+          const txt = h('div', 'cmdText');
+          txt.appendChild(h('div', 'cmdName', STR.upgrades[id]));
+          const research = state.buildings.find((o) => o.research && o.research.id === id);
+          if (done) txt.appendChild(iconEl(CP.icon('check'), 'icon20'));
+          else if (research) txt.appendChild(h('div', 'selNum', Math.floor((research.research.t / def.time) * 100) + '%'));
+          box.appendChild(txt);
+          row.appendChild(box);
+          continue;
+        }
+        const blocker = CP.upgradeBlocker(state, b, id);
+        if (row.childNodes.length) row.appendChild(h('div', 'upOr', STR.or));
+        row.appendChild(cmdButton(iconEl(CP.icon('up_' + id), 'uicon'), STR.upgrades[id], def.cost, state, !blocker, () => CP.startUpgrade(state, b, id)));
+      }
+      cmd.appendChild(row);
     }
 
     // Hearts number next to the cursor when hovering a unit.
@@ -389,6 +423,7 @@
       const key = [
         sel.units.map((u) => u.id + ':' + u.hearts).join(','),
         b ? `${b.id}:${b.built}:${Math.floor(b.progress * 100)}:${b.queue.join('.')}` : '',
+        state.upg ? JSON.stringify(state.upg) + state.buildings.map((o) => (o.research ? Math.floor(o.research.t) : '')).join('') : '',
         sel.node ? `n${sel.node.id}:${sel.node.amount}` : sel.nest ? `g${sel.nest.id}` : '',
         state.res.crystals, state.res.scrap, CP.popUsed(state), CP.popCap(state), view.placing ? view.placing.type : '',
       ].join('|');

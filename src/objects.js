@@ -732,6 +732,40 @@
       c.ellipse(6, 7, 1.5, 1.8, 0x1a0806).ellipse(10, 7, 1.5, 1.8, 0x1a0806);
       c.vline(7, 12, 13, 0x1a0806).vline(9, 12, 13, 0x1a0806);
     },
+    // Upgrades.
+    up_picks(c) {
+      c.line(3, 14, 11, 4, 0x8a5a2a).line(4, 14, 12, 4, 0xb07a3a);
+      c.poly([6, 3, 14, 2, 15, 5, 11, 4], 0xa8acb4).poly([6, 3, 11, 4, 9, 6], 0x6a6e78);
+    },
+    up_boots(c) {
+      c.rect(4, 2, 5, 9, 0x8a4a22).rect(4, 10, 10, 4, 0x8a4a22).rect(4, 13, 11, 2, 0x3a2010);
+      c.rect(5, 3, 2, 7, 0xb06a32).hline(4, 8, 6, 0xc89a3c);
+    },
+    up_supplies(c) {
+      c.rect(2, 4, 12, 10, 0xb07a3a).rect(2, 4, 12, 2, 0xd09a4a);
+      c.line(2, 6, 13, 13, 0x7a4a1a).line(13, 6, 2, 13, 0x7a4a1a).rect(2, 9, 12, 1, 0x7a4a1a);
+    },
+    up_infirmary(c) {
+      c.ellipse(8, 8, 7, 7, 0xf0ece4);
+      c.rect(6, 3, 4, 10, 0xe8402a).rect(3, 6, 10, 4, 0xe8402a);
+    },
+    up_swords(c) {
+      c.line(3, 13, 12, 2, 0xd8dce4).line(4, 13, 13, 2, 0xa8acb4);
+      c.line(13, 13, 4, 2, 0xd8dce4).line(12, 13, 3, 2, 0xa8acb4);
+      c.rect(2, 12, 3, 3, 0xc89a3c).rect(11, 12, 3, 3, 0xc89a3c);
+    },
+    up_shields(c) {
+      c.poly([2, 2, 14, 2, 14, 8, 8, 15, 2, 8], 0xc89a3c);
+      c.poly([4, 4, 12, 4, 12, 8, 8, 13, 4, 8], 0x3a6aa8);
+      c.vline(8, 4, 12, 0xe8ecf0).hline(4, 12, 7, 0xe8ecf0);
+    },
+    up_barrels(c) {
+      c.rect(1, 6, 13, 4, 0x6a6e78).rect(1, 6, 13, 1, 0xa8acb4).rect(12, 5, 3, 6, 0x4a4c56);
+      c.rect(3, 6, 2, 4, 0xc89a3c).rect(8, 6, 2, 4, 0xc89a3c);
+    },
+    up_sights(c) {
+      c.ellipse(8, 8, 7, 7, 0xe8402a).ellipse(8, 8, 5, 5, 0xf0ece4).ellipse(8, 8, 3, 3, 0xe8402a).ellipse(8, 8, 1.2, 1.2, 0xf0ece4);
+    },
     check(c) {
       c.line(3, 8, 6, 11, 0x4dff6a).line(6, 11, 13, 4, 0x4dff6a).line(3, 9, 6, 12, 0x4dff6a).line(6, 12, 13, 5, 0x4dff6a);
     },

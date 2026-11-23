@@ -62,7 +62,7 @@ Cztery typy jednostek, jeden bohater i cztery budynki, czyli tyle, ile Artur oga
 
 - Imię i wygląd wymyśla Artur. Dostaje własną kartę w tym samym szablonie co stwory.
 - Atak 1k6 bierze się z RPG. +2 sprawia, że jest najsilniejszy na polu.
-- Poziomy zdobywa za pokonane stwory: każdy poziom daje +2 serca i +1 do ataku, maksymalnie 5 poziomów. Poziom przechodzi do kolejnych misji.
+- Poziomy zdobywa za pokonane stwory: każdy poziom daje +2 serca i +1 do ataku, maksymalnie 5 poziomów. Poziom przechodzi do kolejnych misji. Przy awansie dostaje tylko te 2 nowe serca, bez pełnego leczenia (Greg 23.11.2026, bo bohater sam wygrywał walki).
 - Gdy straci wszystkie serca, nie ginie. Pada i po 20 sekundach wstaje przy lądowniku, a misja trwa dalej.
 
 | Budynek | Odpowiednik w Warcrafcie 2 | Co daje |
@@ -270,36 +270,61 @@ Rozpisane przez Claude Code 23.11.2026, robocze do sprawdzenia na teście.
 - Stoi przy złożu, wypatruje wroga z 2 kafli i goni najdalej 3 kafle od swojego miejsca.
 - Dopóki Strażnik stoi, osadnicy nie kopią z jego złoża (gra pokazuje, że złoże jest pilnowane).
 
+Wersja 0.9.0, przebudowa po uwadze Grega z 23.11.2026: „zdecydowanie za łatwo”, „czemu bossowie nie mają obstawy”, „nie trzeba decyzji strategicznych”. Greg wybrał: ulepszenia w budynkach z wyborem, słabszy start, obstawę bossów. Liczby z kart bez zmian.
+
+**Ulepszenia w budynkach (od misji 3)**
+
+W każdym budynku dwa ulepszenia do wyboru. Wybór jednego zamyka drugie do końca misji. Ulepszenie kosztuje i trwa (badanie idzie obok szkolenia). Panel pokazuje dwa przyciski ze słowem „albo” między nimi, po wyborze zostaje tylko wybrane z procentem, potem z ptaszkiem.
+
+| Budynek | Wybór | Działanie | Koszt (kryształy/złom), czas |
+|---|---|---|---|
+| Lądownik | Kilofy | osadnik niesie 15 zamiast 10 | 60/30, 20 s |
+| | Buty | osadnicy szybsi o 0,7 | 40/40, 20 s |
+| Kopuła | Zapasy | każda kopuła +2 miejsca (limit rośnie razem z nimi) | 0/80, 25 s |
+| | Lecznica | nasze jednostki do 4 kafli od kopuły odzyskują 1 serce co 3 s | 60/60, 25 s |
+| Warsztat | Miecze | piechur +2 do ataku | 100/60, 30 s |
+| | Tarcze | piechur i strzelec +1 do obrony | 80/80, 30 s |
+| Kuźnia | Lufy | strzelec i działo +2 do ataku | 100/100, 35 s |
+| | Celowniki | strzelec i działo +1 do zasięgu | 80/100, 35 s |
+
+Liczby w `CP.UPGRADES` w `src/data.js`.
+
+**Tarcza bossa**
+
+Boss nie odnosi ran, dopóki w promieniu 12 kafli stoi ktoś z jego straży (ta sama grupa). Widać to jako niebieską, migoczącą bańkę, a ciosy pokazują „0” i niski dźwięk. Ta sama zasada co przy Strażniku pilnującym złoża: najpierw trzeba rozbić straż. Bez tego bohater na 5. poziomie zabijał Władcę w 4 sekundy.
+
 **Misja 3: Wraki**
 
-- **Start:** lądownik, kopuła, warsztat. 3 osadników, 2 piechurów, 2 strzelców, bohater. 150 kryształów, 100 złomu.
+- **Start:** lądownik, kopuła, warsztat. 3 osadników, 1 piechur, 1 strzelec, bohater. 250 kryształów, 200 złomu.
 - **Mapa:** 64×48 kafli. Ruiny dawnej osady stworów: kamienne mury z przejściami. Za ruinami, w prawym górnym rogu, wrak rakiety wcześniejszej wyprawy.
-- **Wrogowie:** 3 patrole MAibawu (1, 2 i 3 wojowników). Bez gniazd robaków.
-- **Cel:** dotrzyj do rakiety, licznik 0/1. Wystarczy, że dojdzie jedna nasza jednostka.
+- **Wrogowie:** 3 patrole MAibawu (2, 3 i 4 wojowników) i 3 MAibawu pilnujących rakiety. Bez gniazd robaków.
+- **Cel:** rozbierz rakietę, czyli przywieź z niej 100 złomu (licznik 0/100). Osadnicy muszą tam dojść i wrócić, więc najpierw trzeba oczyścić drogę. Wcześniej wystarczyło dojść, a nieśmiertelny bohater przebiegał sam.
 
 **Misja 4: Krystaliczne złoże**
 
-- **Start:** lądownik, kopuła, warsztat. 3 osadników, 2 piechurów, 1 strzelec, bohater. 200 kryształów, 200 złomu.
+- **Start:** lądownik, kopuła, warsztat. 3 osadników, 1 piechur, bohater. 300 kryształów, 280 złomu.
 - **Mapa:** 48×48. Małe złoże i wrak przy bazie, duże złoże (1500) z Strażnikiem 20 kafli od bazy. Jedno gniazdo robaków po drodze (wypuszcza robaki co 45 s, nie trzeba go zasypywać).
 - **Cele po kolei:** postaw kuźnię, pokonaj Strażnika, zbierz 200 kryształów z dużego złoża.
 
 **Misja 5: Królowa**
 
-Utrudniona 23.11.2026 (Greg: „za łatwa”). Liczby z kart bez zmian, trudność daje liczba stworów, napady i mniejsza armia na start.
-
-- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 2 piechurów, 1 strzelec, bohater (bez działa). 300 kryształów, 250 złomu, żeby od razu szkolić.
+- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 1 piechur, 1 strzelec, bohater. 400 kryształów, 350 złomu, żeby od razu szkolić i ulepszać.
 - **Mapa:** 64×48. Pałac w prawym górnym rogu: mur z bramami, kolumny, sala tronowa. Po drodze 2 patrole po 3 MAibawu.
-- **Królowa i straż:** Imapia z 4 MAibawu przy boku, przy bramie pałacu 3 kolejnych. Wszyscy walczą razem. Przy pierwszym ciosie Imapia przywołuje z sali tronowej jeszcze 4 MAibawu.
+- **Królowa i straż:** Imapia z 4 MAibawu przy boku, przy bramie pałacu 3 kolejnych. Wszyscy walczą razem i trzymają jej tarczę. Przy pierwszym ciosie Imapia przywołuje z sali tronowej jeszcze 4 MAibawu.
 - **Napady:** od 120 s co 100 s z pałacu na bazę idzie 3 MAibawu, razem 4 napady.
 - **Cel:** pokonaj Imapię, licznik 0/1. Imapia wypatruje wroga z 6 kafli i nie opuszcza pałacu dalej niż na 8 kafli.
-- **Sprawdzone w symulacji:** sama startowa armia wygrywa ostatkiem sił, ginie wszystko poza bohaterem. Po wyszkoleniu 2 piechurów, 2 strzelców i działa wygrywa pewnie (z 9 jednostek wraca 7).
 
 **Misja 6: Jaskinie (finał)**
 
-- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 2 piechurów, 2 strzelców, 1 działo, bohater. 250 kryształów, 250 złomu.
+- **Start:** lądownik, dwie kopuły, warsztat, kuźnia. 3 osadników, 1 piechur, 1 strzelec, bohater. 450 kryształów, 400 złomu.
 - **Mapa:** 64×48, pod ziemią: ciemna skała, kryształowe ściany i jeziorka lawy (nieprzechodnie). Dwa Strażniki przy złożach i gniazdo robaków w połowie drogi.
-- **Władca Kryształów** w najgłębszej grocie. Wypatruje wroga z 5 kafli i nie opuszcza groty dalej niż na 6 kafli.
+- **Władca Kryształów** w najgłębszej grocie, z 2 Strażnikami po bokach i 3 MAibawu. Przy pierwszym ciosie z głębi wychodzą 2 duże robaki i 2 MAibawu. Wypatruje wroga z 5 kafli i nie opuszcza groty dalej niż na 6 kafli.
 - **Cel:** pokonaj Władcę, licznik 0/1. Po wygranej ekran końca kampanii.
+
+**Sprawdzone w symulacji (bot w `tests/run.js`, bohater na 3. poziomie)**
+
+- Misje 3, 5 i 6: sama startowa armia nie wygrywa (sprawdzone też z bohaterem na 1. i 5. poziomie).
+- Bot, który zbiera, szkoli, kupuje ulepszenia (Miecze, Lufy, Lecznica, Kilofy) i atakuje po 4–5 minutach, wygrywa. W misjach 5 i 6 ostatkiem sił, bo bot walczy głupio: bez leczenia w Lecznicy, bez wyciągania stworów po kilka. Człowiek powinien wygrać pewniej. Jeśli będzie za trudno, najprościej zmniejszyć posiłki bossów.
 
 ## Stan prac i ustalenia z budowy
 
@@ -307,7 +332,7 @@ Etapy 1–5 są zrobione (wersja 0.7.0), cała kampania 1–6 czeka na test z Ar
 
 - **Opis celu (0.7.1):** obok licznika zawsze stoi 2–3 słowa, co teraz zrobić. W misji 4 ostatni cel ma ikonę dużego złoża zamiast zwykłego kryształu, bo myliła się z kryształami.
 - **Nowa wersja:** przy podbiciu `CP.VERSION` w `src/data.js` trzeba też zmienić `?v=` przy skryptach w `index.html`, żeby przeglądarka nie zmieszała starych plików z nowymi.
-- **Misja 6 w symulacji** wygrywa sama startowa armia z małymi stratami. Misja 5 była za łatwa i została utrudniona (patrz specyfikacja). Jeśli finał też okaże się za łatwy, dodać mu stwory i napady w ten sam sposób.
+- **Trudność misji 3–6** przebudowana w 0.9.0 (patrz „Etap 5: specyfikacja”).
 - **Budynki są niezniszczalne.** Robaki atakują tylko jednostki. Dzięki temu lądownik zawsze zostaje, a Artur nie traci bazy.
 - **Przegrana:** nie zostaje żadna jednostka i nie da się zrobić osadnika (brak lądownika albo mniej niż 50 kryształów). Sam lądownik bez kryształów to przegrana, bo inaczej gra by stanęła.
 - **Robaki** krążą przy swoim gnieździe i atakują to, co podejdzie na 5 kafli. Gonią najdalej 14 kafli od gniazda. Uderzony z daleka robak rusza na tego, kto go trafił.

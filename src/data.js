@@ -3,7 +3,7 @@
 (function (CP) {
   'use strict';
 
-  CP.VERSION = '0.8.1';
+  CP.VERSION = '0.9.0';
 
   // Art pixels per tile, and how many screen pixels each art pixel takes.
   CP.ART_TILE = 32;
@@ -56,6 +56,26 @@
     attackPerLevel: 1,
     downTime: 20,
   };
+
+  /**
+   * Building upgrades (from mission 3). Each building offers two; choosing
+   * one locks out the other for the rest of the mission. `units` lists who
+   * gains the bonus; attack, defense, range and speed add to their stats.
+   */
+  CP.UPGRADES = {
+    picks: { building: 'lander', cost: [60, 30], time: 20, carry: 5 },
+    boots: { building: 'lander', cost: [40, 40], time: 20, units: ['settler'], speed: 0.7 },
+    supplies: { building: 'dome', cost: [0, 80], time: 25, pop: 2 },
+    infirmary: { building: 'dome', cost: [60, 60], time: 25, heal: { radius: 4, every: 3 } },
+    swords: { building: 'workshop', cost: [100, 60], time: 30, units: ['infantry'], attack: 2 },
+    shields: { building: 'workshop', cost: [80, 80], time: 30, units: ['infantry', 'rifleman'], defense: 1 },
+    barrels: { building: 'forge', cost: [100, 100], time: 35, units: ['rifleman', 'cannon'], attack: 2 },
+    sights: { building: 'forge', cost: [80, 100], time: 35, units: ['rifleman', 'cannon'], range: 1 },
+  };
+  CP.UPGRADE_PAIRS = { lander: ['picks', 'boots'], dome: ['supplies', 'infirmary'], workshop: ['swords', 'shields'], forge: ['barrels', 'sights'] };
+
+  // A boss can't be hurt while a guard of its group stands within this many tiles.
+  CP.BOSS_SHIELD_RANGE = 12;
 
   CP.ECON = {
     carry: 10, // crystals or scrap per trip

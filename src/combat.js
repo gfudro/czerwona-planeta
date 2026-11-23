@@ -46,7 +46,7 @@
     const lv = heroLevelFor(hero.xp);
     if (lv > hero.level) {
       hero.level = lv;
-      hero.hearts = maxHearts(hero); // a new level heals him
+      hero.hearts = Math.min(maxHearts(hero), hero.hearts + CP.HERO.heartsPerLevel); // the new hearts come filled
       state.events.push({ type: 'levelup', id: hero.id, x: hero.x, y: hero.y, level: lv });
     }
     state.hero = { level: hero.level, xp: hero.xp };
@@ -79,8 +79,9 @@
 
   function damage(state, attacker, target) {
     const adef = CP.UNIT_TYPES[attacker.type];
-    const roll = rollAttack(state, adef.attack) + attackBonus(attacker);
-    const dmg = Math.max(1, roll - (adef.pierce ? 0 : CP.UNIT_TYPES[target.type].defense));
+    const roll = rollAttack(state, adef.attack) + attackBonus(attacker) + CP.upgradeBonus(state, attacker.type, 'attack');
+    // A boss behind its shield (while its guard stands) takes nothing.
+    const dmg = target.shield ? 0 : Math.max(1, roll - (adef.pierce ? 0 : CP.UNIT_TYPES[target.type].defense + CP.upgradeBonus(state, target.type, 'defense')));
     target.hearts -= dmg;
     target.hitBy = attacker.id;
     if (target.hearts <= 0 && attacker.type === 'hero') giveXp(state, attacker, target);
@@ -116,7 +117,7 @@
       // Our units don't chase what they can't see.
       if (u.owner === 'player' && !CP.isVisible(state, t.x, t.y)) { u.order = null; CP.stop(u); return; }
       const def = CP.UNIT_TYPES[u.type];
-      const reach = def.range <= 1 ? 0.95 : def.range + 0.4;
+      const reach = def.range <= 1 ? 0.95 : def.range + CP.upgradeBonus(state, u.type, 'range') + 0.4;
       if (!CP.approachUnit(state, u, t, reach)) return;
       if (Math.abs(t.x - u.x) > 0.05) u.facing = t.x > u.x ? 1 : -1;
       if (u.cd > 0) return;
@@ -324,8 +325,17 @@
     }
   }
 
+  /** A boss is shielded while any of its guard (same group) still stands nearby. */
+  function updateShields(state) {
+    for (const u of state.units) {
+      if (!CP.UNIT_TYPES[u.type].boss) continue;
+      u.shield = u.group != null && state.units.some((o) => o !== u && o.group === u.group && o.hearts > 0 && Math.hypot(o.x - u.x, o.y - u.y) < CP.BOSS_SHIELD_RANGE);
+    }
+  }
+
   function updateCreatures(state) {
     updateNests(state);
+    updateShields(state);
     for (const u of state.units) {
       if (u.emerge > 0) u.emerge -= DT();
       if (u.owner === 'wild') updateWild(state, u);
@@ -347,5 +357,5 @@
     });
   }
 
-  Object.assign(CP, { parseDice, rollAttack, addNest, updateCreatures, cleanupDead, nearestEnemy, maxHearts, heroLevelFor, distFromHome });
+  Object.assign(CP, { parseDice, rollAttack, damage, addNest, updateCreatures, cleanupDead, nearestEnemy, maxHearts, heroLevelFor, distFromHome });
 })(window.CP = window.CP || {});

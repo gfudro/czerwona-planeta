@@ -204,7 +204,7 @@
       u.py = u.y;
       if (u.lunge > 0) u.lunge -= dt;
       if (!u.path.length || u.down > 0) { u.walk = 0; continue; }
-      let step = CP.UNIT_TYPES[u.type].speed * dt;
+      let step = (CP.UNIT_TYPES[u.type].speed + CP.upgradeBonus(state, u.type, 'speed')) * dt;
       while (step > 0 && u.path.length) {
         const wp = u.path[0];
         const dx = wp.x - u.x, dy = wp.y - u.y;

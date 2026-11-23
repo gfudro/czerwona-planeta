@@ -167,7 +167,7 @@
       if (!at) continue;
       let name = null;
       switch (e.type) {
-        case 'dmg': name = 'hit'; break;
+        case 'dmg': name = e.amount === 0 ? 'guarded' : 'hit'; break;
         case 'shot': name = e.heavy ? 'cannon' : 'rifle'; break;
         case 'death': name = e.owner === 'player' ? 'deathOurs' : 'deathCreature'; break;
         case 'unload': name = e.kind === 'crystals' || e.kind === 'crystal' ? 'crystal' : 'scrap'; break;
@@ -175,6 +175,7 @@
         case 'fell': case 'rose': case 'guarded': case 'tamed': case 'filled': case 'goal':
         case 'win': case 'lose':
           name = e.type; break;
+        case 'upgraded': name = 'levelup'; break;
       }
       if (e.type === 'shot' && e.heavy) {
         // The ball lands a moment later with a thud.
