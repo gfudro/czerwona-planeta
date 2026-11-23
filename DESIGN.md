@@ -142,6 +142,7 @@ Pixel art rysuje Claude Code w kodzie, jak w Grodzie. Każdy sprite to paleta i 
 - **Animacje skromne:** chód na 2–4 klatki, atak jako wypad z błyskiem, śmierć jako obłoczek pyłu. Lewo i prawo przez odbicie lustrzane.
 - **Paleta z kart:** rdza i ochra pustyni, mosiądz i miedź maszyn, turkus szkła kopuł, fiolet kryształów, granatowe niebo z dwoma księżycami.
 - **Styl budynków i obiektów (od 0.5.0, po uwagach Grega):** cieniowanie światłem z lewej góry, 5–7 odcieni na materiał z ditheringiem, obrys w ciemniejszym odcieniu sąsiedniego koloru zamiast czarnej kreski, tekstury (cegły, nity, rdza, odbicia na szkle). Para, dym i blask rysowane bez obrysu. Narzędzia w `src/shading.js`.
+- **Teren bez kratki (od 0.5.2):** logika mapy zostaje na kaflach, ale obraz nie. Skały, wydmy i szczeliny mają zaokrąglone, poszarpane szumem brzegi. Skały to płaskowyże z głazami i ścianą urwiska od dołu, rzucające cień na piasek. Szczeliny to ciągłe, poszarpane rozpadliny przez środki kafli. Kod w `src/terrain.js`.
 - **Kolor drużyny:** nasi mają jeden wyraźny kolor na stroju, np. pomarańczowy, żeby od razu odróżniać ich od stworów. Nie turkus, bo to kolor MAibawu.
 
 Stwory mają być rozpoznawalne z kart. Karty leżą w repozytorium w folderze `reference/karty` i są wzorem do sprite'ów:
