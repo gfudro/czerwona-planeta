@@ -176,7 +176,7 @@ Kolejność prac:
 4. ✅ Misje 1 i 2 z docelową grafiką. Test na Arturze przesunięty po etapie 5.
 5. Bohater, MAibawu, Strażnik, działo i misje 3–6. Greg 23.11.2026: robimy przed testem z Arturem. ← tu jesteśmy
    1. ✅ Bohater, działo z kuźnią, MAibawu i Strażnik, nowa grafika naszych jednostek w stylu cieniowanym (0.6.0).
-   2. ✅ Misje 3 i 4 (0.6.0). Czeka na sprawdzenie w przeglądarce.
+   2. ✅ Misje 3 i 4 (0.6.0). Sprawdzone w Chrome.
    3. Misje 5 i 6 z Imapią i Władcą, koniec kampanii.
 6. Poprawki po teście z Arturem.
 
