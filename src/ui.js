@@ -41,6 +41,32 @@
     return box;
   }
 
+  // ---- Full screen (Safari still needs the webkit names) ----
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  /** Must be called from a click or key press; browsers refuse it otherwise. */
+  function enterFullscreen() {
+    if (isFullscreen()) return;
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    try {
+      const p = req.call(el);
+      if (p && p.catch) p.catch(() => {}); // refused (no click): just stay in the window
+    } catch (e) { /* not allowed here */ }
+  }
+
+  function toggleFullscreen() {
+    if (!isFullscreen()) { enterFullscreen(); return; }
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+
+  CP.enterFullscreen = enterFullscreen;
+  CP.toggleFullscreen = toggleFullscreen;
+
   function createUI(game) {
     const STR = CP.STR;
     const { view } = game;
@@ -54,6 +80,8 @@
       b.textContent = STR[s];
       b.addEventListener('click', () => game.setSpeed(s));
     }
+    el('fullscreenBtn').textContent = STR.fullscreen;
+    el('fullscreenBtn').addEventListener('click', toggleFullscreen);
     el('autoPauseBtn').textContent = STR.autoPause;
     el('autoPauseBtn').addEventListener('click', () => game.toggleAutoPause());
     el('version').textContent = 'v' + CP.VERSION;
@@ -311,6 +339,7 @@
       el('pauseBtn').textContent = paused ? STR.play : STR.pause;
       el('pauseBtn').classList.toggle('on', paused);
       el('autoPauseBtn').classList.toggle('on', autoPause);
+      el('fullscreenBtn').classList.toggle('on', isFullscreen());
       for (const s of ['slow', 'normal', 'fast']) el('speed-' + s).classList.toggle('on', s === speed);
       el('resCrystalNum').textContent = state.res.crystals;
       el('resScrapNum').textContent = state.res.scrap;
@@ -354,7 +383,7 @@
         b.appendChild(h('div', 'mName', CP.MISSIONS[id].name));
         if (won) b.appendChild(iconEl(CP.icon('check'), 'icon32'));
         if (!open) b.appendChild(h('div', 'lock', '🔒'));
-        if (open) b.addEventListener('click', () => game.startMission(id));
+        if (open) b.addEventListener('click', () => { enterFullscreen(); game.startMission(id); });
         list.appendChild(b);
       }
       box.appendChild(list);
@@ -374,7 +403,7 @@
         row.appendChild(b);
       } else {
         const again = h('button', 'big', STR.again);
-        again.addEventListener('click', () => game.startMission(game.state.mission.id));
+        again.addEventListener('click', () => { enterFullscreen(); game.startMission(game.state.mission.id); });
         row.appendChild(again);
         const menu = h('button', 'big', STR.menu);
         menu.addEventListener('click', () => game.showMenu());

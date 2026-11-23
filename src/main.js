@@ -73,6 +73,8 @@
     }
 
     window.addEventListener('resize', resize);
+    document.addEventListener('fullscreenchange', resize);
+    document.addEventListener('webkitfullscreenchange', resize);
     CP.attachInput(canvas, game);
     const ui = CP.createUI(game);
 

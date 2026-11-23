@@ -237,6 +237,10 @@
         if (!e.repeat) game.togglePause();
         return;
       }
+      if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey) {
+        CP.toggleFullscreen();
+        return;
+      }
       if (e.key === 'Escape') {
         if (view.placing) view.placing = null;
         else selectUnits(view, []);

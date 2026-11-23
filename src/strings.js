@@ -11,6 +11,7 @@
     normal: 'Normalnie',
     fast: 'Szybko',
     autoPause: 'Autopauza',
+    fullscreen: 'Ekran',
     win: 'Brawo!',
     next: 'Dalej',
     lose: 'Koniec',

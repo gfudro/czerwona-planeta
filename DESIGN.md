@@ -123,6 +123,7 @@ Mysz działa jak w Warcrafcie 2, a aktywna pauza jest pod spacją.
 | Aktywna pauza | spacja |
 | Kamera | strzałki, krawędź ekranu, klik w minimapę |
 | Grupy jednostek | Ctrl + cyfra, opcjonalnie dla taty |
+| Pełny ekran | sam się włącza po wybraniu misji; przycisk „Ekran” albo klawisz F |
 
 **Aktywna pauza:** świat stoi, a zaznaczanie, rozkazy i budowanie działają. Gra sama pauzuje, gdy wróg pojawi się w zasięgu wzroku. Ta opcja jest domyślnie włączona i da się ją wyłączyć. Prędkości: wolno, normalnie, szybko.
 
