@@ -436,7 +436,7 @@
       goals: [
         { icon: 'forge', target: 1, count: (s) => s.buildings.filter((b) => b.type === 'forge' && b.built).length },
         { icon: 'guardian', target: 1, count: (s) => (CP.unitById(s, s.guardId) ? 0 : 1) },
-        { icon: 'crystal', target: 200, count: (s) => s.bigNode.max - s.bigNode.amount },
+        { icon: 'bigCrystal', target: 200, count: (s) => s.bigNode.max - s.bigNode.amount },
       ],
     },
   };
@@ -570,7 +570,7 @@
     const def = MISSIONS[m.id];
     const g = def.goals[m.goal];
     if (!g) return null;
-    return { icon: g.icon, value: Math.min(g.target, g.count(state)), target: g.target, index: m.goal, total: def.goals.length };
+    return { icon: g.icon, value: Math.min(g.target, g.count(state)), target: g.target, index: m.goal, total: def.goals.length, text: CP.STR.goalText[`${m.id}.${m.goal}`] || '' };
   }
 
   function updateMission(state) {

@@ -24,7 +24,17 @@
   }
 
   /** Goal icon: a small icon, or a creature's portrait fitted into a square. */
+  /** A sprite centred at the bottom of a square canvas, for use as an icon. */
+  function squareIcon(spr) {
+    const n = Math.max(spr.width, spr.height);
+    const c = document.createElement('canvas');
+    c.width = c.height = n;
+    c.getContext('2d').drawImage(spr, Math.floor((n - spr.width) / 2), n - spr.height);
+    return c;
+  }
+
   function goalIcon(name) {
+    if (name === 'bigCrystal') return squareIcon(CP.objectSprite('bigCrystal'));
     if (!CP.UNIT_TYPES[name] || name === 'settler') return CP.icon(name);
     const spr = CP.unitSprite(name, 0, false);
     const n = Math.max(spr.width, spr.height);
@@ -350,6 +360,7 @@
       box.style.display = 'flex';
       box.appendChild(iconEl(goalIcon(g.icon), 'icon32'));
       box.appendChild(h('span', 'goalNum', `${g.value}/${g.target}`));
+      if (g.text) box.appendChild(h('span', 'goalText', g.text));
       if (changedStep && g.index > 0) {
         box.classList.remove('flash');
         void box.offsetWidth; // restart the animation

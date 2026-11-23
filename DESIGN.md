@@ -222,7 +222,7 @@ Obie misje są rozpisane do budowy. Pozostałe rozpiszemy po teście z Arturem.
 
 - **Start:** lądownik w lewym dolnym rogu, 2 osadników, 50 kryształów, 0 złomu.
 - **Mapa:** małe złoże 6 kafli od lądownika, 2 wraki 8–10 kafli od niego. Mabmia wędruje po środku mapy.
-- **Cele po kolei,** każdy jako ikona z licznikiem: zbierz 60 złomu i postaw kopułę, miej 3 osadników, zbierz łącznie 100 kryształów.
+- **Cele po kolei,** każdy jako ikona z licznikiem i krótkim opisem obok (od 0.7.1, np. „Zbierz złom”; wszystkie opisy w `src/strings.js`, `goalText`): zbierz 60 złomu i postaw kopułę, miej 3 osadników, zbierz łącznie 100 kryształów.
 - **Wrogowie:** brak.
 
 **Misja 2: Robaki w kopułach**
@@ -290,6 +290,7 @@ Rozpisane przez Claude Code 23.11.2026, robocze do sprawdzenia na teście.
 
 Etapy 1–5 są zrobione (wersja 0.7.0), cała kampania 1–6 czeka na test z Arturem. Przy budowie trzeba było rozstrzygnąć kilka drobiazgów, których dokument nie opisywał. To robocze wybory do sprawdzenia na teście:
 
+- **Opis celu (0.7.1):** obok licznika zawsze stoi 2–3 słowa, co teraz zrobić. W misji 4 ostatni cel ma ikonę dużego złoża zamiast zwykłego kryształu, bo myliła się z kryształami.
 - **Nowa wersja:** przy podbiciu `CP.VERSION` w `src/data.js` trzeba też zmienić `?v=` przy skryptach w `index.html`, żeby przeglądarka nie zmieszała starych plików z nowymi.
 - **Misje 5 i 6 w symulacji** wygrywa sama startowa armia z małymi stratami. Na teście sprawdzić, czy bossowie nie są za łatwi (przy obronie z kart można dodać im eskorty, a nie ruszać liczb).
 - **Budynki są niezniszczalne.** Robaki atakują tylko jednostki. Dzięki temu lądownik zawsze zostaje, a Artur nie traci bazy.
@@ -313,7 +314,7 @@ Szkielet jest gotowy, gdy wszystkie punkty działają na grafice zastępczej:
 - [x] Prawy klik wysyła jednostki. Omijają przeszkody i nie zakleszczają się w przejściu szerokim na 1 kafel.
 - [x] Spacja pauzuje, a rozkazy wydane w pauzie wykonują się po wznowieniu.
 - [x] Mgła wojny odkrywa się wokół jednostek w trzech stanach.
-- [ ] 12 jednostek w ruchu bez przycinania w Chrome i Safari na laptopie. Chrome: klatka liczy się w 0,5 ms. Safari czeka na sprawdzenie przez Grega.
+- [x] 12 jednostek w ruchu bez przycinania w Chrome na laptopie. Klatka liczy się w 0,5 ms. Safari odpada (Greg 23.11.2026).
 
 ## Otwarte decyzje
 
