@@ -487,6 +487,10 @@ function allArrived(state) {
   check('a shielded boss takes no harm', q.hearts === before);
 }
 
+// ---- Outro: the final shot finds the hero, sentences stay short ----
+check('outro: plays on mission 6 and finds the hero', CP.INTROS.outro.every((sh) => !sh.at || CP.createMission(6).units.some((u) => u.type === sh.at)));
+check('outro: sentences are short', CP.INTROS.outro.every((sh) => sh.text.split(' ').length <= 9));
+
 // ---- Intros: every shot looks at something that is really on its map ----
 {
   store['czerwona-planeta-postep'] = JSON.stringify({ won: [1, 2, 3, 4, 5], hero: { level: 1, xp: 0 } });

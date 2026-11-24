@@ -21,6 +21,13 @@
         { at: 'lander', cast: ['wormSmall', 'maibawu', 'imapia', 'crystalLord'], text: 'Inne są groźne. Bądź dzielny!' },
       ],
     },
+    // After the last mission is won: plays over the final battlefield, then the colony.
+    outro: [
+      { at: 'hero', text: 'Władca Kryształów pokonany!' },
+      { space: 'colony', fireworks: true, text: 'Osadnicy świętują zwycięstwo!' },
+      { space: 'colony', text: 'Ze starych wraków zbudujemy nowe miasto.' },
+      { space: 'colony', cast: ['hero', 'mabmia'], text: 'Dziękujemy, Bohaterze! Mars jest naszym domem.' },
+    ],
     1: [
       { at: 'lander', text: 'Misja pierwsza. Lądowanie.' },
       { at: 'wreck', text: 'Rozbierz wraki na złom.' },
@@ -198,6 +205,128 @@
     c.rivet(12, 6, M.brass).rivet(19, 6, M.brass);
     c.outline(0x3a1a10);
     return c;
+  }
+
+  // ---- The colony at sunset (outro), 480×270 so buildings keep game size ----
+
+  const CW = 480, CH = 270, HORIZON = 118;
+  let colonyArt = null;
+
+  /** Sky, sun, moons, far mesas and the sand plain; the buildings stand on it later. */
+  function paintColonyBack() {
+    const c = new CP.PixelCanvas(CW, CH);
+    // Mars sky: dusty rose high up, butterscotch at the horizon, a blue glow round the sun.
+    const sky = [0x3a1830, 0x6a2c3a, 0xa04a40, 0xd07a50, 0xe8a86a, 0xf4cc8a];
+    const sunX = 300, sunY = HORIZON - 14;
+    for (let y = 0; y < HORIZON; y++)
+      for (let x = 0; x < CW; x++) {
+        const k = y / HORIZON;
+        let col = CP.tone(sky, k * 0.95, x, y);
+        const d = Math.hypot(x - sunX, (y - sunY) * 1.4);
+        if (d < 70) col = CP.tone([col, CP.mix(col, 0xa8c8e0, 0.35), CP.mix(col, 0xe0f0ff, 0.6)], (1 - d / 70) * 0.99, x, y);
+        c.px(x, y, col);
+      }
+    c.ellipse(sunX, sunY, 6, 6, 0xfff8e8);
+    // Two small moons.
+    c.litBlob(80, 34, 5, 4.2, CP.ramp(0x9a8a80, 5, 0.8, 0.4), { rough: 0.3, seed: 3, ambient: 0.1 });
+    c.litBlob(150, 22, 3, 2.6, CP.ramp(0xb0a090, 5, 0.8, 0.4), { rough: 0.3, seed: 4, ambient: 0.1 });
+    // Far mesas: flat tops, lit from the left, hazy.
+    const mesa = CP.ramp(0x8a4a3a, 6, 0.7, 0.3).map((col) => CP.mix(col, 0xd8906a, 0.35));
+    for (let x = 0; x < CW; x++) {
+      const top = HORIZON - 8 - Math.round(Math.max(0, noise(x, 0, 60, 51) - 0.35) * 70) - Math.round(noise(x, 0, 9, 52) * 3);
+      for (let y = top; y < HORIZON + 4; y++) {
+        const slope = noise(x + 1, 0, 60, 51) - noise(x - 1, 0, 60, 51);
+        c.px(x, y, CP.tone(mesa, 0.45 - slope * 18 + (y - top) * 0.01, x, y));
+      }
+    }
+    // The plain: rolling sand, darker ripples, scattered stones.
+    const sand = CP.MAT.sand;
+    for (let y = HORIZON + 2; y < CH; y++)
+      for (let x = 0; x < CW; x++) {
+        const depth = (y - HORIZON) / (CH - HORIZON);
+        const n = noise(x, y * 2.2, 40, 61) * 0.6 + noise(x, y * 3, 9, 62) * 0.4;
+        c.px(x, y, CP.tone(sand, 0.35 + n * 0.45 + depth * 0.1, x, y));
+      }
+    for (let i = 0; i < 60; i++) {
+      const x = CP.hash(i, 1, 77) * CW, y = HORIZON + 10 + CP.hash(i, 2, 77) * (CH - HORIZON - 14);
+      const r = 1 + CP.hash(i, 3, 77) * 2.5 * ((y - HORIZON) / (CH - HORIZON) + 0.3);
+      c.litBlob(x, y, r * 1.4, r, CP.MAT.rock, { rough: 0.2, seed: i, ambient: 0.25 });
+    }
+    return c;
+  }
+
+  function colonyAssets() {
+    if (colonyArt) return colonyArt;
+    colonyArt = { back: paintColonyBack().toCanvas() };
+    return colonyArt;
+  }
+
+  // The colony: what stands where (x of the left edge, y of the bottom), drawn back to front.
+  const COLONY = [
+    ['workshop', 340, 152], ['dome', 258, 146], ['dome', 420, 160],
+    ['lander', 30, 178], ['dome', 150, 172], ['dome', 300, 184],
+  ];
+  // People walking along the front, above the caption box: type, start x, speed (px/s), y of the feet.
+  const WALKERS = [
+    ['settler', 120, 14, 198], ['mabmia', 100, 14, 202], ['hero', 236, 0, 204],
+    ['settler', 470, -12, 194], ['infantry', 30, 9, 208], ['rifleman', 400, -9, 206],
+  ];
+
+  function drawColony(ctx, shot, t, now) {
+    const A = colonyAssets();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(A.back, 0, 0);
+    if (shot.fireworks) drawFireworks(ctx, t);
+    for (const [type, x, y] of COLONY) {
+      const spr = CP.objectSprite(type);
+      ctx.drawImage(spr, x, y - spr.height);
+    }
+    // Walkers, sorted by depth; the hero stands and jumps for joy now and then.
+    const list = WALKERS.map(([type, x0, v, y]) => ({ type, x: ((x0 + v * t) % (CW + 60) + CW + 60) % (CW + 60) - 30, v, y }));
+    list.sort((a, b) => a.y - b.y);
+    for (const w of list) {
+      const moving = w.v !== 0;
+      const frame = moving ? 1 + (Math.floor(now / 220) % 2) : 0;
+      const spr = CP.unitSprite(w.type, frame, w.v < 0);
+      const jump = !moving ? Math.round(Math.max(0, Math.sin(now / 180)) * 5) : 0;
+      ctx.drawImage(spr, Math.round(w.x - spr.width / 2), Math.round(w.y - spr.height - jump));
+    }
+  }
+
+  /** Pixel fireworks: rockets burst into rings of sparks that fall and fade. */
+  function drawFireworks(ctx, t) {
+    const COLS = ['#ffd84a', '#ff6a50', '#9ee8e0', '#d8a8ff', '#ffffff', '#f28a1e'];
+    for (let k = 0; k < 7; k++) {
+      const period = 1.9, start = k * 0.4;
+      const lt = (t - start) % period;
+      if (t < start || lt < 0) continue;
+      const round = Math.floor((t - start) / period);
+      const bx = 40 + CP.hash(k, round, 91) * (CW - 80), by = 36 + CP.hash(k, round, 92) * 44;
+      const col = COLS[Math.floor(CP.hash(k, round, 93) * COLS.length)];
+      if (lt < 0.6) {
+        // Climbing rocket with a short trail.
+        const y = HORIZON + (by - HORIZON) * (lt / 0.6);
+        ctx.fillStyle = '#fff2c8';
+        ctx.fillRect(Math.round(bx), Math.round(y), 1, 3);
+        continue;
+      }
+      const b = (lt - 0.6) / (period - 0.6); // 0..1 after the burst
+      if (b > 0.75) continue;
+      const n = 26;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = 1 - b / 0.75;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const r = 4 + Math.sqrt(b) * 46;
+        const x = bx + Math.cos(a) * r, y = by + Math.sin(a) * r + b * b * 30;
+        const sz = b < 0.45 ? 2 : 1;
+        ctx.fillRect(Math.round(x), Math.round(y), sz, sz);
+        // A short trail behind each spark.
+        const r2 = r * 0.82;
+        ctx.fillRect(Math.round(bx + Math.cos(a) * r2), Math.round(by + Math.sin(a) * r2 + b * b * 30), 1, 1);
+      }
+      ctx.globalAlpha = 1;
+    }
   }
 
   function spaceAssets() {
@@ -379,6 +508,10 @@
       dots.innerHTML = '';
       shots.forEach((_, j) => dots.appendChild(h('span', j === i ? 'on' : '')));
       space.style.display = s.space ? 'block' : 'none';
+      if (s.space) {
+        const [w, hh] = s.space === 'colony' ? [CW, CH] : [SW, SH];
+        if (space.width !== w) { space.width = w; space.height = hh; }
+      }
       if (!s.space) {
         const { view } = game;
         from = { x: (view.cam.x + view.w / 2) / CP.TILE_PX, y: (view.cam.y + view.h / 2) / CP.TILE_PX };
@@ -430,7 +563,8 @@
       if (!active) return;
       shotT += dt;
       const s = shots[i];
-      if (s.space) drawSpace(sctx, s.space, shotT, now);
+      if (s.space === 'colony') drawColony(sctx, s, shotT, now);
+      else if (s.space) drawSpace(sctx, s.space, shotT, now);
       else {
         const target = focusOf(game.state, to);
         const k = ease(Math.min(1, shotT / PAN_TIME));

@@ -30,6 +30,7 @@
       startMission,
       briefMission: (id) => playIntro(id),
       playStory: () => playIntro('game'),
+      playOutro: () => playOutro(),
       showMenu,
     };
 
@@ -113,6 +114,24 @@
       });
     }
 
+    /** After the last mission: the outro over the won battlefield, then the end screen. */
+    function playOutro() {
+      const state = game.state;
+      state.reveal = true;
+      CP.updateFog(state);
+      document.body.classList.add('intro');
+      resize();
+      screen = 'intro';
+      paused = false;
+      endAt = 0;
+      ui.hideOverlay();
+      intro.play(CP.INTROS.outro, () => {
+        leaveIntro();
+        screen = 'end';
+        ui.showEnd(true);
+      });
+    }
+
     window.addEventListener('keydown', (e) => {
       if (screen === 'intro' && intro.onKey(e)) e.stopImmediatePropagation();
     }, true);
@@ -189,7 +208,8 @@
       handleEvents(now);
       if (screen === 'end' && endAt > 0 && now >= endAt) {
         endAt = 0;
-        ui.showEnd(ui.endWin);
+        if (ui.endWin && game.state.mission.id === CP.MISSION_COUNT) playOutro();
+        else ui.showEnd(ui.endWin);
       }
       CP.updateHover(game);
       CP.draw(game.renderer, state, view, game.alpha(), now);
